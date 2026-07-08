@@ -7,16 +7,19 @@ import {
   BodyProgressForm,
   WorkoutLogForm
 } from "@/components/forms/client-activity-forms";
+import { TraineeInviteForm } from "@/components/forms/trainee-invite-form";
 import { Table, Td, Th } from "@/components/ui/table";
 import { getUserOrRedirect } from "@/lib/auth";
 import { formatDate } from "@/lib/utils";
 
 type PageProps = {
   params: Promise<{ clientId: string }>;
+  searchParams?: Promise<{ invite?: string }>;
 };
 
-export default async function ClientProfilePage({ params }: PageProps) {
+export default async function ClientProfilePage({ params, searchParams }: PageProps) {
   const { clientId } = await params;
+  const inviteStatus = (await searchParams)?.invite;
   const { supabase, user } = await getUserOrRedirect();
 
   const [
@@ -63,6 +66,21 @@ export default async function ClientProfilePage({ params }: PageProps) {
         description={client.goal ?? "No goal set yet."}
         action={<LinkButton href={`/dashboard/clients/${client.id}/edit`}>Edit client</LinkButton>}
       />
+      {inviteStatus === "sent" ? (
+        <div className="mb-4 rounded-md border border-primary/25 bg-white px-4 py-3 text-sm text-primary shadow-soft">
+          Invite email sent.
+        </div>
+      ) : null}
+      {inviteStatus === "error" ? (
+        <div className="mb-4 rounded-md border border-destructive/25 bg-white px-4 py-3 text-sm text-destructive shadow-soft">
+          Invite could not be sent. The email may already belong to an existing account.
+        </div>
+      ) : null}
+      {inviteStatus === "missing-email" ? (
+        <div className="mb-4 rounded-md border border-destructive/25 bg-white px-4 py-3 text-sm text-destructive shadow-soft">
+          Add an email to this trainee before sending an invite.
+        </div>
+      ) : null}
       <section className="grid gap-4 lg:grid-cols-3">
         <div className="rounded-md border bg-white p-4 shadow-soft">
           <h2 className="font-semibold">Profile</h2>
@@ -86,8 +104,18 @@ export default async function ClientProfilePage({ params }: PageProps) {
           </dl>
         </div>
         <div className="lg:col-span-2">
-          <h2 className="mb-3 font-semibold">Assign routine</h2>
-          <AssignRoutineForm clientId={client.id} routines={routines ?? []} />
+          <div className="grid gap-4">
+            <TraineeInviteForm
+              clientId={client.id}
+              email={client.email}
+              invitedAt={client.invited_at}
+              acceptedAt={client.invitation_accepted_at}
+            />
+            <div>
+              <h2 className="mb-3 font-semibold">Assign routine</h2>
+              <AssignRoutineForm clientId={client.id} routines={routines ?? []} />
+            </div>
+          </div>
         </div>
       </section>
       <section className="mt-8 grid gap-6 xl:grid-cols-2">

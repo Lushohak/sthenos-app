@@ -44,6 +44,22 @@ export async function loginAction(formData: FormData) {
     redirect(`/auth/login?error=${encodeURIComponent(error.message)}`);
   }
 
+  const {
+    data: { user }
+  } = await supabase.auth.getUser();
+
+  if (user) {
+    const { data: traineeClient } = await supabase
+      .from("clients")
+      .select("id")
+      .eq("client_user_id", user.id)
+      .maybeSingle();
+
+    if (traineeClient) {
+      redirect("/trainee");
+    }
+  }
+
   redirect("/dashboard");
 }
 

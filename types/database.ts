@@ -13,17 +13,20 @@ export type Database = {
         Row: {
           id: string;
           full_name: string | null;
+          role: "coach" | "trainee";
           created_at: string;
           updated_at: string;
         };
         Insert: {
           id: string;
           full_name?: string | null;
+          role?: "coach" | "trainee";
           created_at?: string;
           updated_at?: string;
         };
         Update: {
           full_name?: string | null;
+          role?: "coach" | "trainee";
           updated_at?: string;
         };
         Relationships: [];
@@ -32,23 +35,29 @@ export type Database = {
         Row: {
           id: string;
           coach_id: string;
+          client_user_id: string | null;
           name: string;
           email: string | null;
           age: number | null;
           goal: string | null;
           notes: string | null;
           status: "active" | "paused" | "archived";
+          invited_at: string | null;
+          invitation_accepted_at: string | null;
           created_at: string;
           updated_at: string;
         };
         Insert: {
           coach_id: string;
+          client_user_id?: string | null;
           name: string;
           email?: string | null;
           age?: number | null;
           goal?: string | null;
           notes?: string | null;
           status?: "active" | "paused" | "archived";
+          invited_at?: string | null;
+          invitation_accepted_at?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["clients"]["Insert"]>;
         Relationships: [
@@ -268,6 +277,7 @@ export type Database = {
     Enums: {
       client_status: "active" | "paused" | "archived";
       assignment_status: "active" | "completed" | "paused";
+      account_role: "coach" | "trainee";
     };
     CompositeTypes: {};
   };

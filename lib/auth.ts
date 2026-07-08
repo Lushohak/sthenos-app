@@ -17,7 +17,8 @@ export async function getUserOrRedirect() {
       full_name:
         typeof user.user_metadata.full_name === "string"
           ? user.user_metadata.full_name
-          : null
+          : null,
+      role: user.user_metadata.role === "trainee" ? "trainee" : "coach"
     },
     {
       onConflict: "id",
@@ -27,6 +28,16 @@ export async function getUserOrRedirect() {
 
   if (error) {
     throw new Error(`Unable to prepare coach profile: ${error.message}`);
+  }
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+
+  if (profile?.role === "trainee") {
+    redirect("/trainee");
   }
 
   return { supabase, user };
