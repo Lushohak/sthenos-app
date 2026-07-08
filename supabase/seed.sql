@@ -1,0 +1,1 @@
+-- Seed data can be added for local demos once product workflows stabilize.
