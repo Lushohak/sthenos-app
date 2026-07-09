@@ -34,24 +34,12 @@ export async function createRoutineAction(formData: FormData) {
 }
 
 export async function addRoutineExerciseAction(routineId: string, formData: FormData) {
-  const { supabase, user } = await getUserOrRedirect();
-  const exerciseName = String(formData.get("exercise_name") ?? "").trim();
-
-  const { data: exercise, error: exerciseError } = await supabase
-    .from("exercises")
-    .insert({
-      coach_id: user.id,
-      name: exerciseName,
-      category: optionalString(formData, "category")
-    })
-    .select("id")
-    .single();
-
-  if (exerciseError) throw new Error(exerciseError.message);
+  const { supabase } = await getUserOrRedirect();
+  const exerciseId = String(formData.get("exercise_id") ?? "");
 
   const { error } = await supabase.from("routine_exercises").insert({
     routine_id: routineId,
-    exercise_id: exercise.id,
+    exercise_id: exerciseId,
     position: Number(formData.get("position") ?? 1),
     sets: Number(formData.get("sets") ?? 3),
     reps: String(formData.get("reps") ?? "10"),

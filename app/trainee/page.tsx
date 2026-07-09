@@ -1,5 +1,7 @@
+import { ExternalLink } from "lucide-react";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { StatCard } from "@/components/dashboard/stat-card";
+import { ExerciseThumb } from "@/components/exercises/exercise-thumb";
 import { Table, Td, Th } from "@/components/ui/table";
 import { getTraineeOrRedirect } from "@/lib/trainee";
 import { formatDate } from "@/lib/utils";
@@ -11,7 +13,7 @@ export default async function TraineeDashboardPage() {
     supabase
       .from("client_routines")
       .select(
-        "id, status, assigned_at, notes, workout_routines(id, name, description, routine_exercises(position, sets, reps, target_weight, rest_seconds, notes, exercises(name, category)))"
+        "id, status, assigned_at, notes, workout_routines(id, name, description, routine_exercises(position, sets, reps, target_weight, rest_seconds, notes, exercises(name, category, description, difficulty, thumbnail_url, video_url, equipment)))"
       )
       .eq("client_id", client.id)
       .order("assigned_at", { ascending: false }),
@@ -73,6 +75,7 @@ export default async function TraineeDashboardPage() {
                   <thead>
                     <tr>
                       <Th>Exercise</Th>
+                      <Th>Demo</Th>
                       <Th>Sets</Th>
                       <Th>Reps</Th>
                       <Th>Weight</Th>
@@ -84,7 +87,29 @@ export default async function TraineeDashboardPage() {
                       const exercise = Array.isArray(item.exercises) ? item.exercises[0] : item.exercises;
                       return (
                         <tr key={`${assignment.id}-${item.position}`}>
-                          <Td>{exercise?.name ?? "Exercise"}</Td>
+                          <Td>
+                            <div className="flex min-w-60 items-center gap-3">
+                              <ExerciseThumb src={exercise?.thumbnail_url} alt={exercise?.name ?? "Exercise"} className="h-14 w-20" />
+                              <div>
+                                <p className="font-medium">{exercise?.name ?? "Exercise"}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  Difficulty {exercise?.difficulty ?? "?"} · {exercise?.equipment ?? "No equipment"}
+                                </p>
+                                {exercise?.description ? (
+                                  <p className="mt-1 max-w-sm text-xs text-muted-foreground">{exercise.description}</p>
+                                ) : null}
+                              </div>
+                            </div>
+                          </Td>
+                          <Td>
+                            {exercise?.video_url ? (
+                              <a className="inline-flex items-center gap-1 text-primary" href={exercise.video_url} target="_blank" rel="noreferrer">
+                                Video <ExternalLink className="h-3 w-3" aria-hidden="true" />
+                              </a>
+                            ) : (
+                              "None"
+                            )}
+                          </Td>
                           <Td>{item.sets}</Td>
                           <Td>{item.reps}</Td>
                           <Td>{item.target_weight ?? "Not set"}</Td>
@@ -94,7 +119,7 @@ export default async function TraineeDashboardPage() {
                     })}
                     {!routineExercises.length ? (
                       <tr>
-                        <Td colSpan={5}>No exercises have been added yet.</Td>
+                        <Td colSpan={6}>No exercises have been added yet.</Td>
                       </tr>
                     ) : null}
                   </tbody>

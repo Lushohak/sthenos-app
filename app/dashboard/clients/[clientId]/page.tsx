@@ -73,7 +73,12 @@ export default async function ClientProfilePage({ params, searchParams }: PagePr
       ) : null}
       {inviteStatus === "error" ? (
         <div className="mb-4 rounded-md border border-destructive/25 bg-white px-4 py-3 text-sm text-destructive shadow-soft">
-          Invite could not be sent. The email may already belong to an existing account.
+          Invite could not be sent. Check Supabase Auth logs for the exact reason.
+        </div>
+      ) : null}
+      {inviteStatus === "email-exists" ? (
+        <div className="mb-4 rounded-md border border-destructive/25 bg-white px-4 py-3 text-sm text-destructive shadow-soft">
+          This email is already reserved in Supabase Auth. Delete the unused Auth user or use another email.
         </div>
       ) : null}
       {inviteStatus === "missing-email" ? (

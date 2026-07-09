@@ -1,11 +1,12 @@
 import Link from "next/link";
-import { Activity, BarChart3, Dumbbell, LayoutDashboard, Users } from "lucide-react";
+import { Activity, BarChart3, Dumbbell, LayoutDashboard, Library, Users } from "lucide-react";
 import { logoutAction } from "@/lib/actions/auth";
 import { Button } from "@/components/ui/button";
 
 const links = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/dashboard/clients", label: "Clients", icon: Users },
+  { href: "/dashboard/exercises", label: "Exercises", icon: Library },
   { href: "/dashboard/routines", label: "Routines", icon: Dumbbell },
   { href: "/dashboard/progress", label: "Progress", icon: BarChart3 }
 ];

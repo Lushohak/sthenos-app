@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { RoutineExerciseForm } from "@/components/forms/routine-exercise-form";
+import { ExerciseThumb } from "@/components/exercises/exercise-thumb";
 import { Table, Td, Th } from "@/components/ui/table";
 import { getUserOrRedirect } from "@/lib/auth";
 
@@ -12,7 +13,7 @@ export default async function RoutineDetailPage({ params }: PageProps) {
   const { routineId } = await params;
   const { supabase, user } = await getUserOrRedirect();
 
-  const [{ data: routine, error }, { data: exercises }] = await Promise.all([
+  const [{ data: routine, error }, { data: routineExercises }, { data: libraryExercises }] = await Promise.all([
     supabase
       .from("workout_routines")
       .select("*")
@@ -21,9 +22,15 @@ export default async function RoutineDetailPage({ params }: PageProps) {
       .single(),
     supabase
       .from("routine_exercises")
-      .select("*, exercises(name, category)")
+      .select("*, exercises(name, category, difficulty, thumbnail_url)")
       .eq("routine_id", routineId)
-      .order("position")
+      .order("position"),
+    supabase
+      .from("exercises")
+      .select("*")
+      .eq("coach_id", user.id)
+      .eq("is_archived", false)
+      .order("name")
   ]);
 
   if (error || !routine) notFound();
@@ -46,18 +53,29 @@ export default async function RoutineDetailPage({ params }: PageProps) {
               </tr>
             </thead>
             <tbody>
-              {exercises?.map((item) => (
-                <tr key={item.id}>
-                  <Td>{item.position}</Td>
-                  <Td>{Array.isArray(item.exercises) ? item.exercises[0]?.name : item.exercises?.name}</Td>
-                  <Td>{item.sets}</Td>
-                  <Td>{item.reps}</Td>
-                  <Td>{item.target_weight ?? "Not set"}</Td>
-                  <Td>{item.rest_seconds ? `${item.rest_seconds}s` : "Not set"}</Td>
-                  <Td>{item.notes ?? "No notes"}</Td>
-                </tr>
-              ))}
-              {!exercises?.length ? (
+              {routineExercises?.map((item) => {
+                const exercise = Array.isArray(item.exercises) ? item.exercises[0] : item.exercises;
+                return (
+                  <tr key={item.id}>
+                    <Td>{item.position}</Td>
+                    <Td>
+                      <div className="flex min-w-56 items-center gap-3">
+                        <ExerciseThumb src={exercise?.thumbnail_url} alt={exercise?.name ?? "Exercise"} className="h-14 w-20" />
+                        <div>
+                          <p className="font-medium">{exercise?.name ?? "Exercise"}</p>
+                          <p className="text-xs text-muted-foreground">Difficulty {exercise?.difficulty ?? "?"}</p>
+                        </div>
+                      </div>
+                    </Td>
+                    <Td>{item.sets}</Td>
+                    <Td>{item.reps}</Td>
+                    <Td>{item.target_weight ?? "Not set"}</Td>
+                    <Td>{item.rest_seconds ? `${item.rest_seconds}s` : "Not set"}</Td>
+                    <Td>{item.notes ?? "No notes"}</Td>
+                  </tr>
+                );
+              })}
+              {!routineExercises?.length ? (
                 <tr>
                   <Td colSpan={7}>No exercises yet.</Td>
                 </tr>
@@ -67,7 +85,7 @@ export default async function RoutineDetailPage({ params }: PageProps) {
         </div>
         <div>
           <h2 className="mb-3 font-semibold">Add exercise</h2>
-          <RoutineExerciseForm routineId={routine.id} nextPosition={(exercises?.length ?? 0) + 1} />
+          <RoutineExerciseForm routineId={routine.id} nextPosition={(routineExercises?.length ?? 0) + 1} exercises={libraryExercises ?? []} />
         </div>
       </section>
     </>

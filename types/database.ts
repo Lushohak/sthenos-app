@@ -76,6 +76,14 @@ export type Database = {
           coach_id: string;
           name: string;
           category: string | null;
+          description: string | null;
+          difficulty: number;
+          thumbnail_url: string | null;
+          video_url: string | null;
+          equipment: string | null;
+          movement_pattern: string | null;
+          primary_muscles: string[];
+          is_archived: boolean;
           notes: string | null;
           created_at: string;
           updated_at: string;
@@ -84,6 +92,14 @@ export type Database = {
           coach_id: string;
           name: string;
           category?: string | null;
+          description?: string | null;
+          difficulty?: number;
+          thumbnail_url?: string | null;
+          video_url?: string | null;
+          equipment?: string | null;
+          movement_pattern?: string | null;
+          primary_muscles?: string[];
+          is_archived?: boolean;
           notes?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["exercises"]["Insert"]>;
@@ -93,6 +109,39 @@ export type Database = {
             columns: ["coach_id"];
             isOneToOne: false;
             referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
+      exercise_progressions: {
+        Row: {
+          id: string;
+          coach_id: string;
+          exercise_id: string;
+          related_exercise_id: string;
+          relationship: "easier" | "harder";
+          created_at: string;
+        };
+        Insert: {
+          coach_id: string;
+          exercise_id: string;
+          related_exercise_id: string;
+          relationship: "easier" | "harder";
+        };
+        Update: Partial<Database["public"]["Tables"]["exercise_progressions"]["Insert"]>;
+        Relationships: [
+          {
+            foreignKeyName: "exercise_progressions_exercise_id_fkey";
+            columns: ["exercise_id"];
+            isOneToOne: false;
+            referencedRelation: "exercises";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "exercise_progressions_related_exercise_id_fkey";
+            columns: ["related_exercise_id"];
+            isOneToOne: false;
+            referencedRelation: "exercises";
             referencedColumns: ["id"];
           }
         ];

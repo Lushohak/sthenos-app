@@ -38,6 +38,12 @@ export async function inviteTraineeAction(clientId: string) {
   });
 
   if (error) {
+    const message = error.message.toLowerCase();
+
+    if (message.includes("already") || message.includes("registered")) {
+      redirect(`/dashboard/clients/${clientId}?invite=email-exists`);
+    }
+
     redirect(`/dashboard/clients/${clientId}?invite=error`);
   }
 
