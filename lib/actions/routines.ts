@@ -14,6 +14,11 @@ function optionalNumber(formData: FormData, key: string) {
   return value.length > 0 ? Number(value) : null;
 }
 
+function numberWithDefault(formData: FormData, key: string, fallback: number) {
+  const value = Number(formData.get(key) ?? fallback);
+  return Number.isFinite(value) ? value : fallback;
+}
+
 export async function createRoutineAction(formData: FormData) {
   const { supabase, user } = await getUserOrRedirect();
 
@@ -22,7 +27,9 @@ export async function createRoutineAction(formData: FormData) {
     .insert({
       coach_id: user.id,
       name: String(formData.get("name") ?? "").trim(),
-      description: optionalString(formData, "description")
+      description: optionalString(formData, "description"),
+      routine_type: String(formData.get("routine_type") ?? "circuit") as "circuit" | "individual",
+      default_cycles: numberWithDefault(formData, "default_cycles", 3)
     })
     .select("id")
     .single();
@@ -36,17 +43,35 @@ export async function createRoutineAction(formData: FormData) {
 export async function addRoutineExerciseAction(routineId: string, formData: FormData) {
   const { supabase } = await getUserOrRedirect();
   const exerciseId = String(formData.get("exercise_id") ?? "");
+  const loadType = String(formData.get("load_type") ?? "weighted") as "weighted" | "bodyweight";
 
   const { error } = await supabase.from("routine_exercises").insert({
     routine_id: routineId,
     exercise_id: exerciseId,
-    position: Number(formData.get("position") ?? 1),
-    sets: Number(formData.get("sets") ?? 3),
+    cycle_number: numberWithDefault(formData, "cycle_number", 1),
+    repeat_count: numberWithDefault(formData, "repeat_count", 1),
+    position: numberWithDefault(formData, "position", 1),
+    sets: numberWithDefault(formData, "sets", 3),
     reps: String(formData.get("reps") ?? "10"),
-    target_weight: optionalString(formData, "target_weight"),
+    load_type: loadType,
+    target_weight: loadType === "bodyweight" ? null : optionalString(formData, "target_weight"),
     rest_seconds: optionalNumber(formData, "rest_seconds"),
     notes: optionalString(formData, "notes")
   });
+
+  if (error) throw new Error(error.message);
+
+  revalidatePath(`/dashboard/routines/${routineId}`);
+}
+
+export async function removeRoutineExerciseAction(routineId: string, routineExerciseId: string) {
+  const { supabase } = await getUserOrRedirect();
+
+  const { error } = await supabase
+    .from("routine_exercises")
+    .delete()
+    .eq("id", routineExerciseId)
+    .eq("routine_id", routineId);
 
   if (error) throw new Error(error.message);
 

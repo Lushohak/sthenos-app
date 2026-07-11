@@ -13,7 +13,7 @@ export default async function TraineeDashboardPage() {
     supabase
       .from("client_routines")
       .select(
-        "id, status, assigned_at, notes, workout_routines(id, name, description, routine_exercises(position, sets, reps, target_weight, rest_seconds, notes, exercises(name, category, description, difficulty, thumbnail_url, video_url, equipment)))"
+        "id, status, assigned_at, notes, workout_routines(id, name, description, routine_type, default_cycles, routine_exercises(position, cycle_number, repeat_count, sets, reps, load_type, target_weight, rest_seconds, notes, exercises(name, category, description, difficulty, thumbnail_url, video_url, equipment)))"
       )
       .eq("client_id", client.id)
       .order("assigned_at", { ascending: false }),
@@ -68,6 +68,11 @@ export default async function TraineeDashboardPage() {
                   <div>
                     <h3 className="font-semibold">{routine?.name ?? "Routine"}</h3>
                     <p className="text-sm text-muted-foreground">{routine?.description ?? "No description"}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {routine?.routine_type === "individual"
+                        ? "Exercise-specific repeats"
+                        : `${routine?.default_cycles ?? 3} cycle routine`}
+                    </p>
                   </div>
                   <span className="text-sm capitalize text-muted-foreground">{assignment.status}</span>
                 </div>
@@ -75,7 +80,9 @@ export default async function TraineeDashboardPage() {
                   <thead>
                     <tr>
                       <Th>Exercise</Th>
+                      <Th>Cycle</Th>
                       <Th>Demo</Th>
+                      <Th>{routine?.routine_type === "individual" ? "Repeats" : "Cycles"}</Th>
                       <Th>Sets</Th>
                       <Th>Reps</Th>
                       <Th>Weight</Th>
@@ -101,6 +108,7 @@ export default async function TraineeDashboardPage() {
                               </div>
                             </div>
                           </Td>
+                          <Td>{item.cycle_number}</Td>
                           <Td>
                             {exercise?.video_url ? (
                               <a className="inline-flex items-center gap-1 text-primary" href={exercise.video_url} target="_blank" rel="noreferrer">
@@ -110,16 +118,17 @@ export default async function TraineeDashboardPage() {
                               "None"
                             )}
                           </Td>
+                          <Td>{item.repeat_count}</Td>
                           <Td>{item.sets}</Td>
                           <Td>{item.reps}</Td>
-                          <Td>{item.target_weight ?? "Not set"}</Td>
+                          <Td>{item.load_type === "bodyweight" ? "Bodyweight" : item.target_weight ? `${item.target_weight} kg` : "Not set"}</Td>
                           <Td>{item.rest_seconds ? `${item.rest_seconds}s` : "Not set"}</Td>
                         </tr>
                       );
                     })}
                     {!routineExercises.length ? (
                       <tr>
-                        <Td colSpan={6}>No exercises have been added yet.</Td>
+                        <Td colSpan={8}>No exercises have been added yet.</Td>
                       </tr>
                     ) : null}
                   </tbody>

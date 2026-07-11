@@ -9,10 +9,10 @@ function optionalString(formData: FormData, key: string) {
   return value.length > 0 ? value : null;
 }
 
-function parseList(value: FormDataEntryValue | null) {
-  return String(value ?? "")
-    .split(",")
-    .map((item) => item.trim())
+function parseList(formData: FormData, key: string) {
+  return formData
+    .getAll(key)
+    .map((item) => String(item).trim())
     .filter(Boolean);
 }
 
@@ -60,7 +60,7 @@ export async function createExerciseAction(formData: FormData) {
       video_url: optionalString(formData, "video_url"),
       equipment: optionalString(formData, "equipment"),
       movement_pattern: optionalString(formData, "movement_pattern"),
-      primary_muscles: parseList(formData.get("primary_muscles")),
+      primary_muscles: parseList(formData, "primary_muscles"),
       notes: optionalString(formData, "notes")
     })
     .select("id")
@@ -87,7 +87,7 @@ export async function updateExerciseAction(exerciseId: string, formData: FormDat
       video_url: optionalString(formData, "video_url"),
       equipment: optionalString(formData, "equipment"),
       movement_pattern: optionalString(formData, "movement_pattern"),
-      primary_muscles: parseList(formData.get("primary_muscles")),
+      primary_muscles: parseList(formData, "primary_muscles"),
       notes: optionalString(formData, "notes"),
       is_archived: formData.get("is_archived") === "on"
     })

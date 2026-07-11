@@ -26,6 +26,7 @@ export default async function RoutinesPage() {
         <thead>
           <tr>
             <Th>Name</Th>
+            <Th>Structure</Th>
             <Th>Description</Th>
             <Th>Created</Th>
           </tr>
@@ -38,13 +39,18 @@ export default async function RoutinesPage() {
                   {routine.name}
                 </Link>
               </Td>
+              <Td>
+                {routine.routine_type === "circuit"
+                  ? `${routine.default_cycles} cycles`
+                  : "Exercise-specific"}
+              </Td>
               <Td>{routine.description ?? "No description"}</Td>
               <Td>{formatDate(routine.created_at)}</Td>
             </tr>
           ))}
           {!routines?.length ? (
             <tr>
-              <Td colSpan={3}>No routines yet.</Td>
+              <Td colSpan={4}>No routines yet.</Td>
             </tr>
           ) : null}
         </tbody>

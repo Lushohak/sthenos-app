@@ -152,6 +152,8 @@ export type Database = {
           coach_id: string;
           name: string;
           description: string | null;
+          routine_type: "circuit" | "individual";
+          default_cycles: number;
           created_at: string;
           updated_at: string;
         };
@@ -159,6 +161,8 @@ export type Database = {
           coach_id: string;
           name: string;
           description?: string | null;
+          routine_type?: "circuit" | "individual";
+          default_cycles?: number;
         };
         Update: Partial<Database["public"]["Tables"]["workout_routines"]["Insert"]>;
         Relationships: [
@@ -176,9 +180,12 @@ export type Database = {
           id: string;
           routine_id: string;
           exercise_id: string;
+          cycle_number: number;
+          repeat_count: number;
           position: number;
           sets: number;
           reps: string;
+          load_type: "weighted" | "bodyweight";
           target_weight: string | null;
           rest_seconds: number | null;
           notes: string | null;
@@ -187,9 +194,12 @@ export type Database = {
         Insert: {
           routine_id: string;
           exercise_id: string;
+          cycle_number?: number;
+          repeat_count?: number;
           position?: number;
           sets: number;
           reps: string;
+          load_type?: "weighted" | "bodyweight";
           target_weight?: string | null;
           rest_seconds?: number | null;
           notes?: string | null;
