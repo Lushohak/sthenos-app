@@ -20,6 +20,8 @@ export function ExerciseThumb({ src, alt, className }: ExerciseThumbProps) {
     <img
       src={src}
       alt={alt}
+      loading="lazy"
+      decoding="async"
       className={cn("aspect-square rounded-md object-cover", className)}
     />
   );
