@@ -1,8 +1,15 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getTraineeOrRedirect } from "@/lib/trainee";
+
+export type TraineeWorkoutLogState = {
+  status: "idle" | "success" | "error";
+  message: string;
+};
 
 function optionalString(formData: FormData, key: string) {
   const value = String(formData.get(key) ?? "").trim();
@@ -69,4 +76,61 @@ export async function completeTraineeSetupAction(formData: FormData) {
   }
 
   redirect("/trainee");
+}
+
+export async function createTraineeWorkoutLogAction(
+  routineId: string,
+  _previousState: TraineeWorkoutLogState,
+  formData: FormData
+): Promise<TraineeWorkoutLogState> {
+  const { supabase, client } = await getTraineeOrRedirect();
+  const trainedOn = String(formData.get("trained_on") ?? "");
+  const today = new Date().toISOString().slice(0, 10);
+
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(trainedOn) || trainedOn > today) {
+    return {
+      status: "error",
+      message: "Choose today or an earlier training date."
+    };
+  }
+
+  const { data: assignment, error: assignmentError } = await supabase
+    .from("client_routines")
+    .select("coach_id")
+    .eq("client_id", client.id)
+    .eq("routine_id", routineId)
+    .eq("status", "active")
+    .limit(1)
+    .maybeSingle();
+
+  if (assignmentError || !assignment) {
+    return {
+      status: "error",
+      message: "This routine is no longer active. Refresh the page or contact your coach."
+    };
+  }
+
+  const { error } = await supabase.from("workout_logs").insert({
+    coach_id: assignment.coach_id,
+    client_id: client.id,
+    routine_id: routineId,
+    trained_on: trainedOn,
+    notes: optionalString(formData, "notes")
+  });
+
+  if (error) {
+    return {
+      status: "error",
+      message: "We could not save this workout. Please try again."
+    };
+  }
+
+  revalidatePath("/trainee");
+  revalidatePath(`/dashboard/clients/${client.id}`);
+  revalidatePath("/dashboard");
+
+  return {
+    status: "success",
+    message: "Workout completed and added to your history."
+  };
 }
