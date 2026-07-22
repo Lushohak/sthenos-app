@@ -17,7 +17,6 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
     .from("exercises")
     .select("*")
     .eq("coach_id", user.id)
-    .eq("is_archived", false)
     .order("name");
 
   if (query) {

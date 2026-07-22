@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { createExerciseAction, updateExerciseAction } from "@/lib/actions/exercises";
 import { Button } from "@/components/ui/button";
-import { Field, Input, Select, Textarea } from "@/components/ui/field";
+import { Field, Input, Select } from "@/components/ui/field";
 import { MuscleMultiSelect } from "@/components/exercises/muscle-multi-select";
 import {
   EXERCISE_CATEGORIES,
@@ -90,41 +90,24 @@ export function ExerciseForm({ exercise }: ExerciseFormProps) {
 
         </div>
       </div>
-      <Field label="Description">
-        <Textarea name="description" defaultValue={exercise?.description ?? ""} />
-      </Field>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="grid gap-2 text-sm font-medium text-foreground">
-          <span>Thumbnail image</span>
-          <Input
-            name="thumbnail_file"
-            type="file"
-            accept="image/png,image/jpeg,image/webp,image/gif"
-            aria-invalid={Boolean(thumbnailError)}
-            onChange={handleThumbnailChange}
-          />
-          {thumbnailError ? (
-            <span className="text-xs font-normal text-destructive">{thumbnailError}</span>
-          ) : (
-            <span className="text-xs font-normal text-muted-foreground">Maximum size: 1 MB.</span>
-          )}
-        </div>
-        <Field label="Thumbnail URL">
-          <Input name="thumbnail_url" type="url" defaultValue={exercise?.thumbnail_url ?? ""} />
-        </Field>
+      <div className="grid gap-2 text-sm font-medium text-foreground">
+        <span>Thumbnail image</span>
+        <Input
+          name="thumbnail_file"
+          type="file"
+          accept="image/png,image/jpeg,image/webp,image/gif"
+          aria-invalid={Boolean(thumbnailError)}
+          onChange={handleThumbnailChange}
+        />
+        {thumbnailError ? (
+          <span className="text-xs font-normal text-destructive">{thumbnailError}</span>
+        ) : (
+          <span className="text-xs font-normal text-muted-foreground">Maximum size: 1 MB.</span>
+        )}
       </div>
       <Field label="Video URL">
         <Input name="video_url" type="url" defaultValue={exercise?.video_url ?? ""} placeholder="https://..." />
       </Field>
-      <Field label="Coach notes">
-        <Textarea name="notes" defaultValue={exercise?.notes ?? ""} />
-      </Field>
-      {exercise ? (
-        <label className="flex items-center gap-2 text-sm text-muted-foreground">
-          <input name="is_archived" type="checkbox" defaultChecked={exercise.is_archived} />
-          Archive this exercise
-        </label>
-      ) : null}
       <Button type="submit" className="w-fit" disabled={Boolean(thumbnailError)}>
         {exercise ? "Save exercise" : "Create exercise"}
       </Button>

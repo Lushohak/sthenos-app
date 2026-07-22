@@ -25,7 +25,7 @@ async function uploadThumbnail(formData: FormData, coachId: string) {
   const file = formData.get("thumbnail_file");
 
   if (!(file instanceof File) || file.size === 0) {
-    return optionalString(formData, "thumbnail_url");
+    return null;
   }
 
   const { supabase } = await getUserOrRedirect();
@@ -54,14 +54,12 @@ export async function createExerciseAction(formData: FormData) {
       coach_id: user.id,
       name: String(formData.get("name") ?? "").trim(),
       category: optionalString(formData, "category"),
-      description: optionalString(formData, "description"),
       difficulty: parseDifficulty(formData),
       thumbnail_url: thumbnailUrl,
       video_url: optionalString(formData, "video_url"),
       equipment: optionalString(formData, "equipment"),
       movement_pattern: optionalString(formData, "movement_pattern"),
-      primary_muscles: parseList(formData, "primary_muscles"),
-      notes: optionalString(formData, "notes")
+      primary_muscles: parseList(formData, "primary_muscles")
     })
     .select("id")
     .single();
@@ -75,22 +73,32 @@ export async function createExerciseAction(formData: FormData) {
 export async function updateExerciseAction(exerciseId: string, formData: FormData) {
   const { supabase, user } = await getUserOrRedirect();
   const thumbnailUrl = await uploadThumbnail(formData, user.id);
+  const updatePayload: {
+    name: string;
+    category: string | null;
+    difficulty: number;
+    video_url: string | null;
+    equipment: string | null;
+    movement_pattern: string | null;
+    primary_muscles: string[];
+    thumbnail_url?: string | null;
+  } = {
+    name: String(formData.get("name") ?? "").trim(),
+    category: optionalString(formData, "category"),
+    difficulty: parseDifficulty(formData),
+    video_url: optionalString(formData, "video_url"),
+    equipment: optionalString(formData, "equipment"),
+    movement_pattern: optionalString(formData, "movement_pattern"),
+    primary_muscles: parseList(formData, "primary_muscles")
+  };
+
+  if (thumbnailUrl) {
+    updatePayload.thumbnail_url = thumbnailUrl;
+  }
 
   const { error } = await supabase
     .from("exercises")
-    .update({
-      name: String(formData.get("name") ?? "").trim(),
-      category: optionalString(formData, "category"),
-      description: optionalString(formData, "description"),
-      difficulty: parseDifficulty(formData),
-      thumbnail_url: thumbnailUrl,
-      video_url: optionalString(formData, "video_url"),
-      equipment: optionalString(formData, "equipment"),
-      movement_pattern: optionalString(formData, "movement_pattern"),
-      primary_muscles: parseList(formData, "primary_muscles"),
-      notes: optionalString(formData, "notes"),
-      is_archived: formData.get("is_archived") === "on"
-    })
+    .update(updatePayload)
     .eq("id", exerciseId);
 
   if (error) throw new Error(error.message);
@@ -98,21 +106,4 @@ export async function updateExerciseAction(exerciseId: string, formData: FormDat
   revalidatePath("/dashboard/exercises");
   revalidatePath(`/dashboard/exercises/${exerciseId}`);
   redirect(`/dashboard/exercises/${exerciseId}`);
-}
-
-export async function addExerciseProgressionAction(exerciseId: string, formData: FormData) {
-  const { supabase, user } = await getUserOrRedirect();
-  const relatedExerciseId = String(formData.get("related_exercise_id") ?? "");
-  const relationship = String(formData.get("relationship") ?? "easier") as "easier" | "harder";
-
-  const { error } = await supabase.from("exercise_progressions").insert({
-    coach_id: user.id,
-    exercise_id: exerciseId,
-    related_exercise_id: relatedExerciseId,
-    relationship
-  });
-
-  if (error) throw new Error(error.message);
-
-  revalidatePath(`/dashboard/exercises/${exerciseId}`);
 }
