@@ -43,18 +43,12 @@ export async function createRoutineAction(formData: FormData) {
 export async function addRoutineExerciseAction(routineId: string, formData: FormData) {
   const { supabase } = await getUserOrRedirect();
   const exerciseId = String(formData.get("exercise_id") ?? "");
-  const loadType = String(formData.get("load_type") ?? "weighted") as "weighted" | "bodyweight";
 
   const { error } = await supabase.from("routine_exercises").insert({
     routine_id: routineId,
     exercise_id: exerciseId,
-    cycle_number: numberWithDefault(formData, "cycle_number", 1),
-    repeat_count: numberWithDefault(formData, "repeat_count", 1),
     position: numberWithDefault(formData, "position", 1),
-    sets: numberWithDefault(formData, "sets", 3),
     reps: String(formData.get("reps") ?? "10"),
-    load_type: loadType,
-    target_weight: loadType === "bodyweight" ? null : optionalString(formData, "target_weight"),
     rest_seconds: optionalNumber(formData, "rest_seconds"),
     notes: optionalString(formData, "notes")
   });
@@ -74,6 +68,30 @@ export async function removeRoutineExerciseAction(routineId: string, routineExer
     .eq("routine_id", routineId);
 
   if (error) throw new Error(error.message);
+
+  revalidatePath(`/dashboard/routines/${routineId}`);
+}
+
+export async function reorderRoutineExercisesAction(routineId: string, orderedIds: string[]) {
+  const { supabase } = await getUserOrRedirect();
+  const uniqueIds = Array.from(new Set(orderedIds.filter(Boolean)));
+
+  if (uniqueIds.length !== orderedIds.length) {
+    throw new Error("Routine exercise order contains duplicate or invalid items.");
+  }
+
+  const results = await Promise.all(
+    uniqueIds.map((id, index) =>
+      supabase
+        .from("routine_exercises")
+        .update({ position: index + 1 })
+        .eq("id", id)
+        .eq("routine_id", routineId)
+    )
+  );
+
+  const failedUpdate = results.find((result) => result.error);
+  if (failedUpdate?.error) throw new Error(failedUpdate.error.message);
 
   revalidatePath(`/dashboard/routines/${routineId}`);
 }
