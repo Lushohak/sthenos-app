@@ -71,14 +71,64 @@ export default async function ClientProfilePage({ params, searchParams }: PagePr
           Invite email sent.
         </div>
       ) : null}
+      {inviteStatus === "resent" ? (
+        <div className="mb-4 rounded-md border border-primary/25 bg-white px-4 py-3 text-sm text-primary shadow-soft">
+          A new password setup email was sent.
+        </div>
+      ) : null}
       {inviteStatus === "error" ? (
         <div className="mb-4 rounded-md border border-destructive/25 bg-white px-4 py-3 text-sm text-destructive shadow-soft">
-          Invite could not be sent. Check Supabase Auth logs for the exact reason.
+          The authentication email could not be sent. Check the server logs for
+          the Supabase error code.
         </div>
       ) : null}
       {inviteStatus === "email-exists" ? (
         <div className="mb-4 rounded-md border border-destructive/25 bg-white px-4 py-3 text-sm text-destructive shadow-soft">
-          This email is already reserved in Supabase Auth. Delete the unused Auth user or use another email.
+          This email already belongs to another Supabase Auth account. Use a
+          different email, or remove the unused Auth user before inviting again.
+        </div>
+      ) : null}
+      {inviteStatus === "email-not-authorized" ? (
+        <div className="mb-4 rounded-md border border-destructive/25 bg-white px-4 py-3 text-sm text-destructive shadow-soft">
+          Supabase cannot send to this address with its default email service.
+          Configure custom SMTP in Supabase Authentication settings, then try
+          again.
+        </div>
+      ) : null}
+      {inviteStatus === "invalid-email" ? (
+        <div className="mb-4 rounded-md border border-destructive/25 bg-white px-4 py-3 text-sm text-destructive shadow-soft">
+          Supabase rejected this email address. Check it for mistakes and avoid
+          example or test-only domains.
+        </div>
+      ) : null}
+      {inviteStatus === "email-disabled" ? (
+        <div className="mb-4 rounded-md border border-destructive/25 bg-white px-4 py-3 text-sm text-destructive shadow-soft">
+          Email authentication is disabled in Supabase. Enable the email
+          provider before sending trainee invitations.
+        </div>
+      ) : null}
+      {inviteStatus === "rate-limited" ? (
+        <div className="mb-4 rounded-md border border-destructive/25 bg-white px-4 py-3 text-sm text-destructive shadow-soft">
+          Supabase temporarily limited authentication emails. Wait a few minutes
+          before trying again.
+        </div>
+      ) : null}
+      {inviteStatus === "account-missing" ? (
+        <div className="mb-4 rounded-md border border-destructive/25 bg-white px-4 py-3 text-sm text-destructive shadow-soft">
+          The linked Auth account no longer exists. Refresh this page and send a
+          new invitation.
+        </div>
+      ) : null}
+      {inviteStatus === "account-mismatch" ? (
+        <div className="mb-4 rounded-md border border-destructive/25 bg-white px-4 py-3 text-sm text-destructive shadow-soft">
+          The trainee email no longer matches the linked Auth account. Restore
+          the original email or contact an administrator before sending another
+          setup link.
+        </div>
+      ) : null}
+      {inviteStatus === "active" ? (
+        <div className="mb-4 rounded-md border border-primary/25 bg-white px-4 py-3 text-sm text-primary shadow-soft">
+          This trainee has already completed account setup.
         </div>
       ) : null}
       {inviteStatus === "missing-email" ? (
@@ -112,6 +162,7 @@ export default async function ClientProfilePage({ params, searchParams }: PagePr
           <div className="grid gap-4">
             <TraineeInviteForm
               clientId={client.id}
+              clientUserId={client.client_user_id}
               email={client.email}
               invitedAt={client.invited_at}
               acceptedAt={client.invitation_accepted_at}
