@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { RoutineExerciseForm } from "@/components/forms/routine-exercise-form";
 import { RoutineExerciseList } from "@/components/forms/routine-exercise-list";
+import { LinkButton } from "@/components/ui/button";
 import { getUserOrRedirect } from "@/lib/auth";
 
 type PageProps = {
@@ -41,7 +42,15 @@ export default async function RoutineDetailPage({ params, searchParams }: PagePr
 
   return (
     <>
-      <PageHeader title={routine.name} description={routine.description ?? "Build the exercise list for this routine."} />
+      <PageHeader
+        title={routine.name}
+        description={routine.description ?? "Build the exercise list for this routine."}
+        action={
+          <LinkButton href={`/dashboard/routines/${routine.id}/assign`}>
+            Assign trainees
+          </LinkButton>
+        }
+      />
       <section className="mb-6 grid gap-4 sm:grid-cols-3">
         <div className="rounded-md border bg-white p-4 shadow-soft">
           <p className="text-sm font-medium text-muted-foreground">Structure</p>

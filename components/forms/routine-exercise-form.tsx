@@ -75,6 +75,9 @@ export function RoutineExerciseForm({
             className="pl-9"
             placeholder="Search by name, category, equipment..."
             onChange={(event) => setQuery(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") event.preventDefault();
+            }}
           />
         </div>
         {exercises.length ? (
