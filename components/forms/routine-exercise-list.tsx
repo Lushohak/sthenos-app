@@ -19,12 +19,14 @@ type RoutineExercise = {
         category: string | null;
         difficulty: number | null;
         thumbnail_url: string | null;
+        archived_at: string | null;
       }
     | {
         name: string;
         category: string | null;
         difficulty: number | null;
         thumbnail_url: string | null;
+        archived_at: string | null;
       }[]
     | null;
 };
@@ -98,7 +100,14 @@ export function RoutineExerciseList({ routineId, routineExercises }: RoutineExer
                 <div className="min-w-0 flex-1">
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
-                      <p className="truncate font-medium">{exercise?.name ?? "Exercise"}</p>
+                      <div className="flex min-w-0 items-center gap-2">
+                        <p className="truncate font-medium">{exercise?.name ?? "Exercise"}</p>
+                        {exercise?.archived_at ? (
+                          <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[0.65rem] font-medium text-muted-foreground">
+                            Archived
+                          </span>
+                        ) : null}
+                      </div>
                       <p className="mt-0.5 text-xs text-muted-foreground">
                         Exercise {index + 1} · Difficulty {exercise?.difficulty ?? "?"}
                       </p>
@@ -210,7 +219,14 @@ export function RoutineExerciseList({ routineId, routineExercises }: RoutineExer
                         className="h-14 w-20"
                       />
                       <div>
-                        <p className="font-medium">{exercise?.name ?? "Exercise"}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium">{exercise?.name ?? "Exercise"}</p>
+                          {exercise?.archived_at ? (
+                            <span className="rounded-full bg-muted px-2 py-0.5 text-[0.65rem] font-medium text-muted-foreground">
+                              Archived
+                            </span>
+                          ) : null}
+                        </div>
                         <p className="text-xs text-muted-foreground">
                           Difficulty {exercise?.difficulty ?? "?"}
                         </p>

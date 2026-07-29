@@ -4,19 +4,23 @@ import { PageHeader } from "@/components/dashboard/page-header";
 import { LinkButton } from "@/components/ui/button";
 import { Input } from "@/components/ui/field";
 import { ExerciseThumb } from "@/components/exercises/exercise-thumb";
+import { ExerciseArchivedToast } from "@/components/exercises/exercise-archived-toast";
 import { getUserOrRedirect } from "@/lib/auth";
 
 type PageProps = {
-  searchParams?: Promise<{ q?: string }>;
+  searchParams?: Promise<{ q?: string; archived?: string }>;
 };
 
 export default async function ExercisesPage({ searchParams }: PageProps) {
   const { supabase, user } = await getUserOrRedirect();
-  const query = (await searchParams)?.q?.trim() ?? "";
+  const resolvedSearchParams = await searchParams;
+  const query = resolvedSearchParams?.q?.trim() ?? "";
+  const archivedExerciseName = resolvedSearchParams?.archived?.trim() ?? "";
   let request = supabase
     .from("exercises")
     .select("*")
     .eq("coach_id", user.id)
+    .is("archived_at", null)
     .order("name");
 
   if (query) {
@@ -66,6 +70,9 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
           </div>
         ) : null}
       </section>
+      {archivedExerciseName ? (
+        <ExerciseArchivedToast exerciseName={archivedExerciseName} />
+      ) : null}
     </>
   );
 }

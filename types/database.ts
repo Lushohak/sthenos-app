@@ -82,6 +82,7 @@ export type Database = {
           equipment: string | null;
           movement_pattern: string | null;
           primary_muscles: string[];
+          archived_at: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -95,6 +96,7 @@ export type Database = {
           equipment?: string | null;
           movement_pattern?: string | null;
           primary_muscles?: string[];
+          archived_at?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["exercises"]["Insert"]>;
         Relationships: [

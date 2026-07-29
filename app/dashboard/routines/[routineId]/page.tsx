@@ -21,13 +21,14 @@ export default async function RoutineDetailPage({ params }: PageProps) {
       .single(),
     supabase
       .from("routine_exercises")
-      .select("*, exercises(name, category, difficulty, thumbnail_url)")
+      .select("*, exercises(name, category, difficulty, thumbnail_url, archived_at)")
       .eq("routine_id", routineId)
       .order("position"),
     supabase
       .from("exercises")
       .select("*")
       .eq("coach_id", user.id)
+      .is("archived_at", null)
       .order("name")
   ]);
 

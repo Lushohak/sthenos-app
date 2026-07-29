@@ -107,3 +107,42 @@ export async function updateExerciseAction(exerciseId: string, formData: FormDat
   revalidatePath(`/dashboard/exercises/${exerciseId}`);
   redirect(`/dashboard/exercises/${exerciseId}`);
 }
+
+export type ArchiveExerciseResult =
+  | { success: true }
+  | { success: false; message: string };
+
+export async function archiveExerciseAction(
+  exerciseId: string
+): Promise<ArchiveExerciseResult> {
+  const { supabase, user } = await getUserOrRedirect();
+  const { data, error } = await supabase
+    .from("exercises")
+    .update({ archived_at: new Date().toISOString() })
+    .eq("id", exerciseId)
+    .eq("coach_id", user.id)
+    .is("archived_at", null)
+    .select("id")
+    .maybeSingle();
+
+  if (error) {
+    return {
+      success: false,
+      message: "We could not archive this exercise. Please try again."
+    };
+  }
+
+  if (!data) {
+    return {
+      success: false,
+      message: "This exercise is unavailable or has already been archived."
+    };
+  }
+
+  revalidatePath("/dashboard/exercises");
+  revalidatePath(`/dashboard/exercises/${exerciseId}`);
+  revalidatePath("/dashboard/routines");
+  revalidatePath("/trainee");
+
+  return { success: true };
+}
