@@ -14,6 +14,12 @@ function optionalNumber(formData: FormData, key: string) {
   return value.length > 0 ? Number(value) : null;
 }
 
+export type AssignRoutineState = {
+  status: "idle" | "success" | "error";
+  message: string;
+  routineName?: string;
+};
+
 export async function createClientAction(formData: FormData) {
   const { supabase, user } = await getUserOrRedirect();
 
@@ -94,17 +100,55 @@ export async function createBodyProgressAction(clientId: string, formData: FormD
   revalidatePath("/dashboard/progress");
 }
 
-export async function assignRoutineAction(clientId: string, formData: FormData) {
+export async function assignRoutineAction(
+  clientId: string,
+  _previousState: AssignRoutineState,
+  formData: FormData
+): Promise<AssignRoutineState> {
   const { supabase, user } = await getUserOrRedirect();
+  const routineId = String(formData.get("routine_id") ?? "");
+
+  if (!routineId) {
+    return {
+      status: "error",
+      message: "Select a routine before assigning it."
+    };
+  }
+
+  const { data: routine, error: routineError } = await supabase
+    .from("workout_routines")
+    .select("name")
+    .eq("id", routineId)
+    .eq("coach_id", user.id)
+    .single();
+
+  if (routineError || !routine) {
+    return {
+      status: "error",
+      message: "That routine is no longer available. Refresh the page and try again."
+    };
+  }
 
   const { error } = await supabase.from("client_routines").insert({
     coach_id: user.id,
     client_id: clientId,
-    routine_id: String(formData.get("routine_id") ?? ""),
+    routine_id: routineId,
     notes: optionalString(formData, "notes")
   });
 
-  if (error) throw new Error(error.message);
+  if (error) {
+    return {
+      status: "error",
+      message: "We could not assign this routine. Please try again."
+    };
+  }
 
   revalidatePath(`/dashboard/clients/${clientId}`);
+  revalidatePath("/trainee");
+
+  return {
+    status: "success",
+    message: "Routine assigned successfully.",
+    routineName: routine.name
+  };
 }

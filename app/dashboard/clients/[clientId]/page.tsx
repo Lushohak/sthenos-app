@@ -3,10 +3,10 @@ import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { LinkButton } from "@/components/ui/button";
 import {
-  AssignRoutineForm,
   BodyProgressForm,
   WorkoutLogForm
 } from "@/components/forms/client-activity-forms";
+import { AssignRoutineForm } from "@/components/forms/assign-routine-form";
 import { TraineeInviteForm } from "@/components/forms/trainee-invite-form";
 import { Table, Td, Th } from "@/components/ui/table";
 import { getUserOrRedirect } from "@/lib/auth";
@@ -169,7 +169,11 @@ export default async function ClientProfilePage({ params, searchParams }: PagePr
             />
             <div>
               <h2 className="mb-3 font-semibold">Assign routine</h2>
-              <AssignRoutineForm clientId={client.id} routines={routines ?? []} />
+              <AssignRoutineForm
+                clientId={client.id}
+                clientName={client.name}
+                routines={routines ?? []}
+              />
             </div>
           </div>
         </div>

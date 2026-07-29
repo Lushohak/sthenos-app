@@ -1,5 +1,4 @@
 import {
-  assignRoutineAction,
   createBodyProgressAction,
   createWorkoutLogAction
 } from "@/lib/actions/clients";
@@ -17,29 +16,6 @@ type Props = {
   routines: Routine[];
   assignments: Assignment[];
 };
-
-export function AssignRoutineForm({ clientId, routines }: Pick<Props, "clientId" | "routines">) {
-  return (
-    <form action={assignRoutineAction.bind(null, clientId)} className="grid gap-4 rounded-md border bg-white p-4 shadow-soft">
-      <Field label="Routine">
-        <Select name="routine_id" required>
-          <option value="">Select a routine</option>
-          {routines.map((routine) => (
-            <option key={routine.id} value={routine.id}>
-              {routine.name}
-            </option>
-          ))}
-        </Select>
-      </Field>
-      <Field label="Assignment notes">
-        <Textarea name="notes" />
-      </Field>
-      <SubmitButton className="w-fit" pendingLabel="Assigning routine...">
-        Assign routine
-      </SubmitButton>
-    </form>
-  );
-}
 
 export function WorkoutLogForm({ clientId, assignments }: Pick<Props, "clientId" | "assignments">) {
   return (
