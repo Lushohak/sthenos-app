@@ -285,7 +285,14 @@ export type Database = {
       };
     };
     Views: {};
-    Functions: {};
+    Functions: {
+      get_trainee_peers: {
+        Args: Record<string, never>;
+        Returns: {
+          name: string;
+        }[];
+      };
+    };
     Enums: {
       client_status: "active" | "paused" | "archived";
       assignment_status: "active" | "completed" | "paused";
