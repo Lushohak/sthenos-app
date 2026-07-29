@@ -6,10 +6,15 @@ import { getUserOrRedirect } from "@/lib/auth";
 
 type PageProps = {
   params: Promise<{ routineId: string }>;
+  searchParams?: Promise<{ createdExercise?: string }>;
 };
 
-export default async function RoutineDetailPage({ params }: PageProps) {
-  const { routineId } = await params;
+export default async function RoutineDetailPage({ params, searchParams }: PageProps) {
+  const [{ routineId }, resolvedSearchParams] = await Promise.all([
+    params,
+    searchParams
+  ]);
+  const createdExerciseId = resolvedSearchParams?.createdExercise;
   const { supabase, user } = await getUserOrRedirect();
 
   const [{ data: routine, error }, { data: routineExercises }, { data: libraryExercises }] = await Promise.all([
@@ -58,11 +63,12 @@ export default async function RoutineDetailPage({ params }: PageProps) {
           <RoutineExerciseList routineId={routine.id} routineExercises={routineExercises ?? []} />
         </div>
         <div>
-          <h2 className="mb-3 font-semibold">Add exercise</h2>
+          <h2 className="mb-3 font-semibold">Add exercise to routine</h2>
           <RoutineExerciseForm
             routineId={routine.id}
             nextPosition={(routineExercises?.length ?? 0) + 1}
             exercises={libraryExercises ?? []}
+            initialExerciseId={createdExerciseId}
           />
         </div>
       </section>

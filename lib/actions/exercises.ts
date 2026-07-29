@@ -21,6 +21,13 @@ function parseDifficulty(formData: FormData) {
   return Math.min(5, Math.max(1, Number.isFinite(value) ? value : 1));
 }
 
+function getSafeRoutineReturnPath(formData: FormData) {
+  const value = String(formData.get("return_to") ?? "").trim();
+  return /^\/dashboard\/routines\/[0-9a-f-]{36}$/i.test(value)
+    ? value
+    : null;
+}
+
 async function uploadThumbnail(formData: FormData, coachId: string) {
   const file = formData.get("thumbnail_file");
 
@@ -47,6 +54,7 @@ async function uploadThumbnail(formData: FormData, coachId: string) {
 export async function createExerciseAction(formData: FormData) {
   const { supabase, user } = await getUserOrRedirect();
   const thumbnailUrl = await uploadThumbnail(formData, user.id);
+  const returnTo = getSafeRoutineReturnPath(formData);
 
   const { data, error } = await supabase
     .from("exercises")
@@ -67,6 +75,11 @@ export async function createExerciseAction(formData: FormData) {
   if (error) throw new Error(error.message);
 
   revalidatePath("/dashboard/exercises");
+  if (returnTo) {
+    revalidatePath(returnTo);
+    redirect(`${returnTo}?createdExercise=${data.id}`);
+  }
+
   redirect(`/dashboard/exercises/${data.id}`);
 }
 

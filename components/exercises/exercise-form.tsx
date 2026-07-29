@@ -17,11 +17,12 @@ type Exercise = Database["public"]["Tables"]["exercises"]["Row"];
 
 type ExerciseFormProps = {
   exercise?: Exercise;
+  returnTo?: string;
 };
 
 const MAX_THUMBNAIL_SIZE_BYTES = 1024 * 1024;
 
-export function ExerciseForm({ exercise }: ExerciseFormProps) {
+export function ExerciseForm({ exercise, returnTo }: ExerciseFormProps) {
   const action = exercise ? updateExerciseAction.bind(null, exercise.id) : createExerciseAction;
   const [thumbnailError, setThumbnailError] = useState<string | null>(null);
 
@@ -38,6 +39,9 @@ export function ExerciseForm({ exercise }: ExerciseFormProps) {
 
   return (
     <form action={action} className="grid max-w-3xl gap-4">
+      {!exercise && returnTo ? (
+        <input name="return_to" type="hidden" value={returnTo} />
+      ) : null}
       <Field label="Title">
         <Input name="name" defaultValue={exercise?.name} required />
       </Field>
