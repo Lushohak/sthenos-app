@@ -79,7 +79,7 @@ export async function completeTraineeSetupAction(formData: FormData) {
 }
 
 export async function createTraineeWorkoutLogAction(
-  routineId: string,
+  assignmentId: string,
   _previousState: TraineeWorkoutLogState,
   formData: FormData
 ): Promise<TraineeWorkoutLogState> {
@@ -96,11 +96,10 @@ export async function createTraineeWorkoutLogAction(
 
   const { data: assignment, error: assignmentError } = await supabase
     .from("client_routines")
-    .select("coach_id")
+    .select("coach_id, routine_id")
+    .eq("id", assignmentId)
     .eq("client_id", client.id)
-    .eq("routine_id", routineId)
     .eq("status", "active")
-    .limit(1)
     .maybeSingle();
 
   if (assignmentError || !assignment) {
@@ -113,7 +112,7 @@ export async function createTraineeWorkoutLogAction(
   const { error } = await supabase.from("workout_logs").insert({
     coach_id: assignment.coach_id,
     client_id: client.id,
-    routine_id: routineId,
+    routine_id: assignment.routine_id,
     trained_on: trainedOn,
     notes: optionalString(formData, "notes")
   });
@@ -126,8 +125,10 @@ export async function createTraineeWorkoutLogAction(
   }
 
   revalidatePath("/trainee");
+  revalidatePath("/trainee/progress");
   revalidatePath(`/dashboard/clients/${client.id}`);
   revalidatePath("/dashboard");
+  revalidatePath("/dashboard/progress");
 
   return {
     status: "success",

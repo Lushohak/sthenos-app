@@ -1,0 +1,670 @@
+"use client";
+
+import {
+  useActionState,
+  useEffect,
+  useMemo,
+  useRef,
+  useState
+} from "react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Check,
+  Clock3,
+  ExternalLink,
+  Flag,
+  Maximize2,
+  PlayCircle,
+  Trophy,
+  X
+} from "lucide-react";
+import {
+  createTraineeWorkoutLogAction,
+  type TraineeWorkoutLogState
+} from "@/lib/actions/trainee";
+import { ExerciseThumb } from "@/components/exercises/exercise-thumb";
+import { Button, LinkButton } from "@/components/ui/button";
+import { Field, Input, Textarea } from "@/components/ui/field";
+import { Modal } from "@/components/ui/modal";
+import { Spinner } from "@/components/ui/spinner";
+import { Toast } from "@/components/ui/toast";
+
+export type WorkoutPlayerExercise = {
+  id: string;
+  name: string;
+  category: string | null;
+  equipment: string | null;
+  thumbnailUrl: string | null;
+  videoUrl: string | null;
+  reps: string;
+  restSeconds: number | null;
+  notes: string | null;
+};
+
+type WorkoutPlayerProps = {
+  assignmentId: string;
+  routineId: string;
+  routineName: string;
+  routineDescription: string | null;
+  assignmentNotes: string | null;
+  routineType: "circuit" | "individual";
+  defaultCycles: number;
+  exercises: WorkoutPlayerExercise[];
+  today: string;
+};
+
+type WorkoutPhase = "exercise" | "rest" | "summary";
+
+type SavedWorkout = {
+  signature: string;
+  stepIndex: number;
+  phase: WorkoutPhase;
+  startedAt: number;
+  restEndsAt: number | null;
+};
+
+const initialActionState: TraineeWorkoutLogState = {
+  status: "idle",
+  message: ""
+};
+
+function getLocalDateValue() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function formatTimer(totalSeconds: number) {
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes}:${String(seconds).padStart(2, "0")}`;
+}
+
+export function WorkoutPlayer({
+  assignmentId,
+  routineId,
+  routineName,
+  routineDescription,
+  assignmentNotes,
+  routineType,
+  defaultCycles,
+  exercises,
+  today
+}: WorkoutPlayerProps) {
+  const cycleCount = routineType === "circuit" ? Math.max(defaultCycles, 1) : 1;
+  const totalSteps = exercises.length * cycleCount;
+  const storageKey = `sthenos:workout:${assignmentId}`;
+  const signature = useMemo(
+    () => `${routineId}:${cycleCount}:${exercises.map((exercise) => exercise.id).join(",")}`,
+    [cycleCount, exercises, routineId]
+  );
+  const touchStart = useRef<{ x: number; y: number } | null>(null);
+  const [phase, setPhase] = useState<WorkoutPhase>("exercise");
+  const [stepIndex, setStepIndex] = useState(0);
+  const [startedAt, setStartedAt] = useState(() => Date.now());
+  const [restEndsAt, setRestEndsAt] = useState<number | null>(null);
+  const [restSecondsRemaining, setRestSecondsRemaining] = useState(0);
+  const [hasRestored, setHasRestored] = useState(false);
+  const [isExitModalOpen, setIsExitModalOpen] = useState(false);
+  const [isImageModalOpen, setIsImageModalOpen] = useState(false);
+  const [isToastOpen, setIsToastOpen] = useState(false);
+  const [localToday, setLocalToday] = useState(today);
+  const [trainingDate, setTrainingDate] = useState(today);
+  const [actionState, formAction, isPending] = useActionState(
+    createTraineeWorkoutLogAction.bind(null, assignmentId),
+    initialActionState
+  );
+
+  const exerciseIndex = exercises.length ? stepIndex % exercises.length : 0;
+  const round = exercises.length ? Math.floor(stepIndex / exercises.length) + 1 : 1;
+  const currentExercise = exercises[exerciseIndex];
+  const nextStepIndex = Math.min(stepIndex + 1, Math.max(totalSteps - 1, 0));
+  const nextExercise = exercises.length
+    ? exercises[nextStepIndex % exercises.length]
+    : undefined;
+  const completedSteps =
+    phase === "summary"
+      ? totalSteps
+      : phase === "rest"
+        ? Math.min(stepIndex + 1, totalSteps)
+        : stepIndex;
+  const progressPercentage = totalSteps
+    ? Math.round((completedSteps / totalSteps) * 100)
+    : 0;
+  const elapsedMinutes = Math.max(
+    1,
+    Math.round((Date.now() - startedAt) / 60_000)
+  );
+
+  useEffect(() => {
+    const currentLocalDate = getLocalDateValue();
+    setLocalToday(currentLocalDate);
+    setTrainingDate(currentLocalDate);
+
+    try {
+      const savedValue = window.localStorage.getItem(storageKey);
+      if (!savedValue) return;
+
+      const saved = JSON.parse(savedValue) as SavedWorkout;
+      if (
+        saved.signature !== signature ||
+        !Number.isInteger(saved.stepIndex) ||
+        saved.stepIndex < 0 ||
+        saved.stepIndex >= totalSteps ||
+        !["exercise", "rest", "summary"].includes(saved.phase) ||
+        !Number.isFinite(saved.startedAt) ||
+        saved.startedAt <= 0 ||
+        saved.startedAt > Date.now()
+      ) {
+        window.localStorage.removeItem(storageKey);
+        return;
+      }
+
+      setStepIndex(saved.stepIndex);
+      setStartedAt(saved.startedAt);
+
+      if (saved.phase === "rest" && saved.restEndsAt) {
+        if (saved.restEndsAt > Date.now()) {
+          setPhase("rest");
+          setRestEndsAt(saved.restEndsAt);
+          setRestSecondsRemaining(
+            Math.ceil((saved.restEndsAt - Date.now()) / 1000)
+          );
+        } else {
+          setStepIndex(Math.min(saved.stepIndex + 1, totalSteps - 1));
+          setPhase("exercise");
+        }
+      } else {
+        setPhase(saved.phase);
+      }
+    } catch {
+      try {
+        window.localStorage.removeItem(storageKey);
+      } catch {
+        // Resume is an enhancement; the workout remains usable without storage.
+      }
+    } finally {
+      setHasRestored(true);
+    }
+  }, [signature, storageKey, totalSteps]);
+
+  useEffect(() => {
+    if (!hasRestored || !totalSteps || actionState.status === "success") return;
+
+    const savedWorkout: SavedWorkout = {
+      signature,
+      stepIndex,
+      phase,
+      startedAt,
+      restEndsAt
+    };
+    try {
+      window.localStorage.setItem(storageKey, JSON.stringify(savedWorkout));
+    } catch {
+      // Resume is an enhancement; the workout remains usable without storage.
+    }
+  }, [
+    actionState.status,
+    hasRestored,
+    phase,
+    restEndsAt,
+    signature,
+    startedAt,
+    stepIndex,
+    storageKey,
+    totalSteps
+  ]);
+
+  useEffect(() => {
+    if (phase !== "rest" || !restEndsAt) return;
+
+    function updateTimer() {
+      const remaining = Math.max(
+        0,
+        Math.ceil(((restEndsAt ?? Date.now()) - Date.now()) / 1000)
+      );
+      setRestSecondsRemaining(remaining);
+
+      if (remaining === 0) {
+        setStepIndex((current) => Math.min(current + 1, totalSteps - 1));
+        setRestEndsAt(null);
+        setPhase("exercise");
+      }
+    }
+
+    updateTimer();
+    const intervalId = window.setInterval(updateTimer, 250);
+    return () => window.clearInterval(intervalId);
+  }, [phase, restEndsAt, totalSteps]);
+
+  useEffect(() => {
+    if (actionState.status !== "success") return;
+
+    try {
+      window.localStorage.removeItem(storageKey);
+    } catch {
+      // The completed workout is already persisted in Supabase.
+    }
+    setIsToastOpen(true);
+  }, [actionState.status, storageKey]);
+
+  function advanceAfterRest() {
+    setStepIndex((current) => Math.min(current + 1, totalSteps - 1));
+    setRestEndsAt(null);
+    setRestSecondsRemaining(0);
+    setPhase("exercise");
+  }
+
+  function handleExerciseDone() {
+    if (!currentExercise) return;
+
+    if (stepIndex >= totalSteps - 1) {
+      setPhase("summary");
+      return;
+    }
+
+    if (currentExercise.restSeconds && currentExercise.restSeconds > 0) {
+      const endTime = Date.now() + currentExercise.restSeconds * 1000;
+      setRestEndsAt(endTime);
+      setRestSecondsRemaining(currentExercise.restSeconds);
+      setPhase("rest");
+      return;
+    }
+
+    setStepIndex((current) => current + 1);
+  }
+
+  function handlePrevious() {
+    if (phase === "summary") {
+      setStepIndex(Math.max(totalSteps - 1, 0));
+      setPhase("exercise");
+      return;
+    }
+
+    if (phase === "rest") {
+      setRestEndsAt(null);
+      setPhase("exercise");
+      return;
+    }
+
+    setStepIndex((current) => Math.max(current - 1, 0));
+  }
+
+  if (!exercises.length) {
+    return (
+      <section className="mx-auto max-w-xl rounded-xl border border-dashed bg-white p-8 text-center shadow-soft">
+        <Flag className="mx-auto h-9 w-9 text-muted-foreground" aria-hidden="true" />
+        <h1 className="mt-3 text-xl font-semibold">This workout is not ready yet</h1>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Your coach needs to add at least one exercise before you can begin.
+        </p>
+        <LinkButton href="/trainee" className="mt-5">
+          Back to routines
+        </LinkButton>
+      </section>
+    );
+  }
+
+  if (actionState.status === "success") {
+    return (
+      <>
+        <section className="mx-auto max-w-xl rounded-xl border bg-white p-6 text-center shadow-soft sm:p-8">
+          <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-primary">
+            <Trophy className="h-8 w-8" aria-hidden="true" />
+          </span>
+          <h1 className="mt-4 text-2xl font-semibold">Workout saved</h1>
+          <p className="mt-2 text-muted-foreground">
+            Nice work completing {routineName}. Your coach can now see this session.
+          </p>
+          <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-center">
+            <LinkButton href="/trainee">Back to routines</LinkButton>
+            <LinkButton href="/trainee/progress" variant="secondary">
+              View progress
+            </LinkButton>
+          </div>
+        </section>
+        <Toast
+          open={isToastOpen}
+          onOpenChange={setIsToastOpen}
+          title="Workout completed"
+          description="Your session was added to your workout history."
+          variant="success"
+        />
+      </>
+    );
+  }
+
+  return (
+    <>
+      <section className="mx-auto max-w-3xl pb-24 sm:pb-0">
+        <div className="mb-4 flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-primary">
+              {phase === "summary"
+                ? "Ready to finish"
+                : routineType === "circuit"
+                  ? `Round ${round} of ${cycleCount}`
+                  : `Exercise ${stepIndex + 1} of ${totalSteps}`}
+            </p>
+            <h1 className="truncate text-xl font-semibold sm:text-2xl">{routineName}</h1>
+          </div>
+          <Button
+            type="button"
+            variant="ghost"
+            className="shrink-0"
+            disabled={isPending}
+            onClick={() => setIsExitModalOpen(true)}
+          >
+            <X className="h-4 w-4" aria-hidden="true" />
+            Exit
+          </Button>
+        </div>
+
+        <div
+          className="mb-5 h-2 overflow-hidden rounded-full bg-muted"
+          role="progressbar"
+          aria-label="Workout progress"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={progressPercentage}
+        >
+          <div
+            className="h-full rounded-full bg-primary transition-[width] duration-300"
+            style={{ width: `${progressPercentage}%` }}
+          />
+        </div>
+
+        {phase === "exercise" && currentExercise ? (
+          <>
+            <div
+              key={`${round}-${currentExercise.id}`}
+              className="touch-pan-y overflow-hidden rounded-xl border bg-white shadow-soft"
+              onTouchStart={(event) => {
+                const touch = event.changedTouches[0];
+                touchStart.current = touch
+                  ? { x: touch.clientX, y: touch.clientY }
+                  : null;
+              }}
+              onTouchEnd={(event) => {
+                const start = touchStart.current;
+                const touch = event.changedTouches[0];
+                touchStart.current = null;
+                if (!start || !touch) return;
+
+                const distanceX = touch.clientX - start.x;
+                const distanceY = touch.clientY - start.y;
+                const isHorizontalGesture =
+                  Math.abs(distanceX) > 70 &&
+                  Math.abs(distanceX) > Math.abs(distanceY) * 1.2;
+
+                if (!isHorizontalGesture) return;
+                if (distanceX < 0) handleExerciseDone();
+                if (distanceX > 0 && stepIndex > 0) handlePrevious();
+              }}
+            >
+              <div className="p-4 sm:p-6" aria-live="polite">
+              <div className="mb-4 flex items-center justify-between gap-3 text-sm text-muted-foreground">
+                <span>
+                  Exercise {exerciseIndex + 1} of {exercises.length}
+                </span>
+                {routineType === "circuit" ? (
+                  <span>Round {round} of {cycleCount}</span>
+                ) : null}
+              </div>
+              {currentExercise.thumbnailUrl ? (
+                <button
+                  type="button"
+                  className="group relative block w-full overflow-hidden rounded-md outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                  aria-label={`View the full image for ${currentExercise.name}`}
+                  aria-haspopup="dialog"
+                  onClick={() => setIsImageModalOpen(true)}
+                >
+                  <ExerciseThumb
+                    src={currentExercise.thumbnailUrl}
+                    alt={currentExercise.name}
+                    className="aspect-video h-52 w-full transition group-hover:brightness-90 sm:h-72"
+                  />
+                  <span className="absolute bottom-3 right-3 inline-flex items-center gap-2 rounded-full bg-foreground/80 px-3 py-1.5 text-xs font-medium text-white shadow-lg backdrop-blur-sm">
+                    <Maximize2 className="h-3.5 w-3.5" aria-hidden="true" />
+                    View full image
+                  </span>
+                </button>
+              ) : (
+                <ExerciseThumb
+                  src={null}
+                  alt={currentExercise.name}
+                  className="aspect-video h-52 w-full sm:h-72"
+                />
+              )}
+              <div className="mt-5 text-center">
+                <h2 className="text-2xl font-semibold">{currentExercise.name}</h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {[currentExercise.category, currentExercise.equipment]
+                    .filter(Boolean)
+                    .join(" · ") || "No equipment details"}
+                </p>
+              </div>
+              <div className="mx-auto mt-5 grid max-w-md grid-cols-2 gap-3">
+                <div className="rounded-lg bg-muted/60 p-4 text-center">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Reps
+                  </p>
+                  <p className="mt-1 text-xl font-semibold">{currentExercise.reps}</p>
+                </div>
+                <div className="rounded-lg bg-muted/60 p-4 text-center">
+                  <p className="flex items-center justify-center gap-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    <Clock3 className="h-3.5 w-3.5" aria-hidden="true" />
+                    Rest
+                  </p>
+                  <p className="mt-1 text-xl font-semibold">
+                    {currentExercise.restSeconds
+                      ? `${currentExercise.restSeconds}s`
+                      : "None"}
+                  </p>
+                </div>
+              </div>
+              {currentExercise.notes ? (
+                <div className="mx-auto mt-4 max-w-xl rounded-lg border border-primary/20 bg-primary/5 p-4 text-sm">
+                  <span className="font-medium">Coach instruction:</span>{" "}
+                  {currentExercise.notes}
+                </div>
+              ) : null}
+              {currentExercise.videoUrl ? (
+                <a
+                  href={currentExercise.videoUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mx-auto mt-4 flex h-10 w-fit items-center justify-center gap-2 rounded-md border px-4 text-sm font-medium text-primary transition hover:bg-muted"
+                >
+                  <PlayCircle className="h-4 w-4" aria-hidden="true" />
+                  Watch demo
+                  <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+                </a>
+              ) : null}
+              </div>
+            </div>
+            <div className="fixed inset-x-0 bottom-0 z-40 border-t bg-white/95 p-3 shadow-2xl backdrop-blur sm:static sm:mt-4 sm:rounded-xl sm:border sm:shadow-soft">
+              <div className="mx-auto grid max-w-3xl grid-cols-2 gap-2 sm:flex sm:items-center sm:justify-between">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  disabled={stepIndex === 0}
+                  onClick={handlePrevious}
+                >
+                  <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+                  Previous
+                </Button>
+                <p className="hidden text-xs text-muted-foreground sm:block">
+                  Swipe or use the controls
+                </p>
+                <Button type="button" onClick={handleExerciseDone}>
+                  {stepIndex === totalSteps - 1 ? (
+                    <Flag className="h-4 w-4" aria-hidden="true" />
+                  ) : (
+                    <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                  )}
+                  {stepIndex === totalSteps - 1 ? "Finish exercises" : "Done — Next"}
+                </Button>
+              </div>
+            </div>
+          </>
+        ) : null}
+
+        {phase === "rest" ? (
+          <div className="rounded-xl border bg-white p-6 text-center shadow-soft sm:p-10">
+            <Clock3 className="mx-auto h-9 w-9 text-primary" aria-hidden="true" />
+            <p className="mt-4 text-sm font-medium uppercase tracking-wide text-muted-foreground">
+              Rest before the next exercise
+            </p>
+            <p className="mt-3 text-6xl font-semibold tabular-nums">
+              {formatTimer(restSecondsRemaining)}
+            </p>
+            {nextExercise ? (
+              <p className="mt-4 text-sm text-muted-foreground">
+                Up next: <span className="font-medium text-foreground">{nextExercise.name}</span>
+              </p>
+            ) : null}
+            <div className="mt-7 flex flex-col-reverse gap-2 sm:flex-row sm:justify-center">
+              <Button type="button" variant="secondary" onClick={handlePrevious}>
+                <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+                Back
+              </Button>
+              <Button type="button" onClick={advanceAfterRest}>
+                Skip rest
+                <ArrowRight className="h-4 w-4" aria-hidden="true" />
+              </Button>
+            </div>
+          </div>
+        ) : null}
+
+        {phase === "summary" ? (
+          <div className="rounded-xl border bg-white p-5 shadow-soft sm:p-7">
+            <div className="text-center">
+              <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary">
+                <Trophy className="h-7 w-7" aria-hidden="true" />
+              </span>
+              <h2 className="mt-4 text-2xl font-semibold">Workout complete</h2>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Review the session, add an optional note, then save it for your coach.
+              </p>
+            </div>
+            <dl className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
+              <div className="rounded-lg bg-muted/60 p-4 text-center">
+                <dt className="text-xs font-medium text-muted-foreground">Exercises</dt>
+                <dd className="mt-1 text-lg font-semibold">{totalSteps}</dd>
+              </div>
+              <div className="rounded-lg bg-muted/60 p-4 text-center">
+                <dt className="text-xs font-medium text-muted-foreground">Rounds</dt>
+                <dd className="mt-1 text-lg font-semibold">{cycleCount}</dd>
+              </div>
+              <div className="col-span-2 rounded-lg bg-muted/60 p-4 text-center sm:col-span-1">
+                <dt className="text-xs font-medium text-muted-foreground">Time</dt>
+                <dd className="mt-1 text-lg font-semibold">~{elapsedMinutes} min</dd>
+              </div>
+            </dl>
+            {routineDescription || assignmentNotes ? (
+              <div className="mt-5 rounded-lg border p-4 text-sm text-muted-foreground">
+                {assignmentNotes ?? routineDescription}
+              </div>
+            ) : null}
+            <form action={formAction} className="mt-6 grid gap-4">
+              <Field label="Training date">
+                <Input
+                  name="trained_on"
+                  type="date"
+                  value={trainingDate}
+                  max={localToday}
+                  onChange={(event) => setTrainingDate(event.target.value)}
+                  required
+                />
+              </Field>
+              <Field label="How did it feel?" hint="Optional — add anything your coach should know.">
+                <Textarea
+                  name="notes"
+                  placeholder="Energy, difficulty, pain, or a personal best..."
+                />
+              </Field>
+              {actionState.status === "error" ? (
+                <p
+                  className="rounded-md border border-destructive/25 bg-destructive/5 px-3 py-2 text-sm text-destructive"
+                  role="alert"
+                >
+                  {actionState.message}
+                </p>
+              ) : null}
+              <div className="flex flex-col-reverse gap-2 border-t pt-4 sm:flex-row sm:justify-between">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  disabled={isPending}
+                  onClick={handlePrevious}
+                >
+                  <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+                  Back to workout
+                </Button>
+                <Button type="submit" disabled={isPending}>
+                  {isPending ? (
+                    <Spinner className="h-4 w-4" />
+                  ) : (
+                    <Check className="h-4 w-4" aria-hidden="true" />
+                  )}
+                  {isPending ? "Saving workout..." : "Finish and save workout"}
+                </Button>
+              </div>
+            </form>
+          </div>
+        ) : null}
+      </section>
+
+      <Modal
+        open={isImageModalOpen}
+        onOpenChange={setIsImageModalOpen}
+        title={currentExercise?.name ?? "Exercise image"}
+        description="Full exercise reference image"
+        className="max-w-6xl"
+      >
+        {currentExercise?.thumbnailUrl ? (
+          <>
+            <div className="flex min-h-0 items-center justify-center overflow-auto bg-muted/30 p-3 sm:p-6">
+              <img
+                src={currentExercise.thumbnailUrl}
+                alt={currentExercise.name}
+                className="block h-auto max-h-[calc(100dvh-13rem)] w-auto max-w-full object-contain"
+              />
+            </div>
+            <div className="flex justify-end border-t p-4">
+              <Button type="button" onClick={() => setIsImageModalOpen(false)}>
+                Return to workout
+              </Button>
+            </div>
+          </>
+        ) : null}
+      </Modal>
+
+      <Modal
+        open={isExitModalOpen}
+        onOpenChange={(open) => {
+          if (!isPending) setIsExitModalOpen(open);
+        }}
+        title="Leave this workout?"
+        description="Your current exercise and round are saved on this device, so you can resume later."
+      >
+        <div className="flex flex-col-reverse gap-2 p-5 sm:flex-row sm:justify-end">
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => setIsExitModalOpen(false)}
+          >
+            Continue workout
+          </Button>
+          <LinkButton href="/trainee" variant="secondary">
+            Leave workout
+          </LinkButton>
+        </div>
+      </Modal>
+    </>
+  );
+}

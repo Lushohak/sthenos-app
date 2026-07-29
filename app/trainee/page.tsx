@@ -1,6 +1,5 @@
 import {
   CalendarDays,
-  ChevronDown,
   Clock3,
   Dumbbell,
   ExternalLink,
@@ -10,14 +9,13 @@ import {
 import { PageHeader } from "@/components/dashboard/page-header";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { ExerciseThumb } from "@/components/exercises/exercise-thumb";
-import { CompleteWorkoutForm } from "@/components/trainee/complete-workout-form";
+import { WorkoutRoutineActions } from "@/components/trainee/workout-routine-actions";
 import { Table, Td, Th } from "@/components/ui/table";
 import { getTraineeOrRedirect } from "@/lib/trainee";
 import { formatDate } from "@/lib/utils";
 
 export default async function TraineeDashboardPage() {
   const { supabase, client } = await getTraineeOrRedirect();
-  const today = new Date().toISOString().slice(0, 10);
 
   const [
     { data: assignments },
@@ -83,7 +81,7 @@ export default async function TraineeDashboardPage() {
         <div className="mb-4">
           <h2 className="text-xl font-semibold">Your routines</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Choose today&apos;s routine, follow the exercise order, then record the completed workout.
+            Preview the plan or begin a guided workout when you are ready to train.
           </p>
         </div>
         <div className="grid gap-5">
@@ -97,12 +95,11 @@ export default async function TraineeDashboardPage() {
             const isActive = assignment.status === "active";
 
             return (
-              <details
+              <article
                 key={assignment.id}
-                name="assigned-routines"
-                className="group overflow-hidden rounded-xl border bg-white shadow-soft"
+                className="overflow-hidden rounded-xl border bg-white shadow-soft"
               >
-                <summary className="cursor-pointer list-none p-4 outline-none transition hover:bg-muted/30 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary group-open:border-b sm:p-5 [&::-webkit-details-marker]:hidden">
+                <div className="p-4 sm:p-5">
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
@@ -132,10 +129,6 @@ export default async function TraineeDashboardPage() {
                           {routine.default_cycles} cycles
                         </span>
                       ) : null}
-                      <span className="ml-auto inline-flex h-9 w-9 items-center justify-center rounded-full border bg-white text-foreground transition group-open:rotate-180 sm:ml-1">
-                        <ChevronDown className="h-4 w-4" aria-hidden="true" />
-                        <span className="sr-only">Toggle routine details</span>
-                      </span>
                     </div>
                   </div>
                   {assignment.notes ? (
@@ -143,94 +136,89 @@ export default async function TraineeDashboardPage() {
                       <span className="font-medium">Coach note:</span> {assignment.notes}
                     </div>
                   ) : null}
-                </summary>
-
-                <div className="p-4 sm:p-5">
-                  <h4 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                    Workout plan
-                  </h4>
-                  <ol className="grid gap-3">
-                    {routineExercises.map((item, index) => {
-                      const exercise = Array.isArray(item.exercises)
-                        ? item.exercises[0]
-                        : item.exercises;
-
-                      return (
-                        <li
-                          key={`${assignment.id}-${item.position}`}
-                          className="grid gap-3 rounded-lg border p-3 sm:grid-cols-[2rem_6rem_minmax(0,1fr)_auto] sm:items-center sm:gap-4"
-                        >
-                          <span className="hidden h-8 w-8 items-center justify-center rounded-full bg-muted text-sm font-semibold text-muted-foreground sm:flex">
-                            {index + 1}
-                          </span>
-                          <ExerciseThumb
-                            src={exercise?.thumbnail_url}
-                            alt={exercise?.name ?? "Exercise"}
-                            className="h-36 w-full sm:h-16 sm:w-24"
-                          />
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-2">
-                              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold text-muted-foreground sm:hidden">
-                                {index + 1}
-                              </span>
-                              <p className="font-medium">{exercise?.name ?? "Exercise"}</p>
-                            </div>
-                            <p className="mt-1 text-xs text-muted-foreground">
-                              {[exercise?.category, exercise?.equipment]
-                                .filter(Boolean)
-                                .join(" · ") || "No equipment details"}
-                            </p>
-                            {item.notes ? (
-                              <p className="mt-2 text-sm text-muted-foreground">{item.notes}</p>
-                            ) : null}
-                          </div>
-                          <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
-                            <div className="rounded-md bg-muted/60 px-3 py-2 text-center">
-                              <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-muted-foreground">Reps</p>
-                              <p className="mt-0.5 text-sm font-semibold">{item.reps}</p>
-                            </div>
-                            <div className="rounded-md bg-muted/60 px-3 py-2 text-center">
-                              <p className="flex items-center justify-center gap-1 text-[0.65rem] font-semibold uppercase tracking-wide text-muted-foreground">
-                                <Clock3 className="h-3 w-3" aria-hidden="true" /> Rest
-                              </p>
-                              <p className="mt-0.5 text-sm font-semibold">
-                                {item.rest_seconds ? `${item.rest_seconds}s` : "—"}
-                              </p>
-                            </div>
-                            {exercise?.video_url ? (
-                              <a
-                                className="col-span-2 inline-flex h-10 items-center justify-center gap-2 rounded-md border px-3 text-sm font-medium text-primary transition hover:bg-muted sm:col-span-1"
-                                href={exercise.video_url}
-                                target="_blank"
-                                rel="noreferrer"
-                              >
-                                <PlayCircle className="h-4 w-4" aria-hidden="true" />
-                                Demo
-                                <ExternalLink className="h-3 w-3" aria-hidden="true" />
-                              </a>
-                            ) : null}
-                          </div>
-                        </li>
-                      );
-                    })}
-                    {!routineExercises.length ? (
-                      <li className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
-                        Your coach has not added exercises to this routine yet.
-                      </li>
-                    ) : null}
-                  </ol>
                 </div>
 
-                {isActive && routine ? (
-                  <div className="border-t bg-muted/20 p-4 sm:p-5">
-                    <CompleteWorkoutForm
-                      routineId={routine.id}
-                      routineName={routine.name}
-                      today={today}
-                    />
+                <WorkoutRoutineActions
+                  assignmentId={assignment.id}
+                  canBegin={isActive && Boolean(routine) && routineExercises.length > 0}
+                >
+                  <div className="p-4 sm:p-5">
+                    <h4 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                      Workout plan
+                    </h4>
+                    <ol className="grid gap-3">
+                      {routineExercises.map((item, index) => {
+                        const exercise = Array.isArray(item.exercises)
+                          ? item.exercises[0]
+                          : item.exercises;
+
+                        return (
+                          <li
+                            key={`${assignment.id}-${item.position}`}
+                            className="grid gap-3 rounded-lg border p-3 sm:grid-cols-[2rem_6rem_minmax(0,1fr)_auto] sm:items-center sm:gap-4"
+                          >
+                            <span className="hidden h-8 w-8 items-center justify-center rounded-full bg-muted text-sm font-semibold text-muted-foreground sm:flex">
+                              {index + 1}
+                            </span>
+                            <ExerciseThumb
+                              src={exercise?.thumbnail_url}
+                              alt={exercise?.name ?? "Exercise"}
+                              className="h-36 w-full sm:h-16 sm:w-24"
+                            />
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold text-muted-foreground sm:hidden">
+                                  {index + 1}
+                                </span>
+                                <p className="font-medium">{exercise?.name ?? "Exercise"}</p>
+                              </div>
+                              <p className="mt-1 text-xs text-muted-foreground">
+                                {[exercise?.category, exercise?.equipment]
+                                  .filter(Boolean)
+                                  .join(" · ") || "No equipment details"}
+                              </p>
+                              {item.notes ? (
+                                <p className="mt-2 text-sm text-muted-foreground">{item.notes}</p>
+                              ) : null}
+                            </div>
+                            <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
+                              <div className="rounded-md bg-muted/60 px-3 py-2 text-center">
+                                <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-muted-foreground">Reps</p>
+                                <p className="mt-0.5 text-sm font-semibold">{item.reps}</p>
+                              </div>
+                              <div className="rounded-md bg-muted/60 px-3 py-2 text-center">
+                                <p className="flex items-center justify-center gap-1 text-[0.65rem] font-semibold uppercase tracking-wide text-muted-foreground">
+                                  <Clock3 className="h-3 w-3" aria-hidden="true" /> Rest
+                                </p>
+                                <p className="mt-0.5 text-sm font-semibold">
+                                  {item.rest_seconds ? `${item.rest_seconds}s` : "—"}
+                                </p>
+                              </div>
+                              {exercise?.video_url ? (
+                                <a
+                                  className="col-span-2 inline-flex h-10 items-center justify-center gap-2 rounded-md border px-3 text-sm font-medium text-primary transition hover:bg-muted sm:col-span-1"
+                                  href={exercise.video_url}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                >
+                                  <PlayCircle className="h-4 w-4" aria-hidden="true" />
+                                  Demo
+                                  <ExternalLink className="h-3 w-3" aria-hidden="true" />
+                                </a>
+                              ) : null}
+                            </div>
+                          </li>
+                        );
+                      })}
+                      {!routineExercises.length ? (
+                        <li className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
+                          Your coach has not added exercises to this routine yet.
+                        </li>
+                      ) : null}
+                    </ol>
                   </div>
-                ) : null}
-              </details>
+                </WorkoutRoutineActions>
+              </article>
             );
           })}
           {!orderedAssignments.length ? (
