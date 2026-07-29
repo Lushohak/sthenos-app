@@ -1,7 +1,7 @@
 import { completeTraineeSetupAction } from "@/lib/actions/trainee";
 import { PageHeader } from "@/components/dashboard/page-header";
-import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { getTraineeOrRedirect } from "@/lib/trainee";
 
 type PageProps = {
@@ -37,9 +37,9 @@ export default async function TraineeSetupPage({ searchParams }: PageProps) {
         <Field label="Password" hint="Use at least 6 characters.">
           <Input name="password" type="password" autoComplete="new-password" minLength={6} required />
         </Field>
-        <Button type="submit" className="w-fit">
+        <SubmitButton className="w-fit" pendingLabel="Creating account...">
           Complete setup
-        </Button>
+        </SubmitButton>
       </form>
     </>
   );

@@ -3,8 +3,8 @@ import {
   createBodyProgressAction,
   createWorkoutLogAction
 } from "@/lib/actions/clients";
-import { Button } from "@/components/ui/button";
 import { Field, Input, Select, Textarea } from "@/components/ui/field";
+import { SubmitButton } from "@/components/ui/submit-button";
 import type { Database } from "@/types/database";
 
 type Routine = Database["public"]["Tables"]["workout_routines"]["Row"];
@@ -34,9 +34,9 @@ export function AssignRoutineForm({ clientId, routines }: Pick<Props, "clientId"
       <Field label="Assignment notes">
         <Textarea name="notes" />
       </Field>
-      <Button type="submit" className="w-fit">
+      <SubmitButton className="w-fit" pendingLabel="Assigning routine...">
         Assign routine
-      </Button>
+      </SubmitButton>
     </form>
   );
 }
@@ -64,9 +64,9 @@ export function WorkoutLogForm({ clientId, assignments }: Pick<Props, "clientId"
       <Field label="Notes">
         <Textarea name="notes" />
       </Field>
-      <Button type="submit" className="w-fit">
+      <SubmitButton className="w-fit" pendingLabel="Saving workout...">
         Mark completed
-      </Button>
+      </SubmitButton>
     </form>
   );
 }
@@ -102,9 +102,9 @@ export function BodyProgressForm({ clientId }: Pick<Props, "clientId">) {
       <Field label="Notes">
         <Textarea name="notes" />
       </Field>
-      <Button type="submit" className="w-fit">
+      <SubmitButton className="w-fit" pendingLabel="Adding progress...">
         Add progress
-      </Button>
+      </SubmitButton>
       {/* TODO: Add progress photo uploads with Supabase Storage here. */}
       {/* TODO: Add AI progress insights once enough history exists. */}
     </form>

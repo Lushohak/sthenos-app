@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { createExerciseAction, updateExerciseAction } from "@/lib/actions/exercises";
-import { Button } from "@/components/ui/button";
 import { Field, Input, Select } from "@/components/ui/field";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { MuscleMultiSelect } from "@/components/exercises/muscle-multi-select";
 import {
   EXERCISE_CATEGORIES,
@@ -108,9 +108,13 @@ export function ExerciseForm({ exercise }: ExerciseFormProps) {
       <Field label="Video URL">
         <Input name="video_url" type="url" defaultValue={exercise?.video_url ?? ""} placeholder="https://..." />
       </Field>
-      <Button type="submit" className="w-fit" disabled={Boolean(thumbnailError)}>
+      <SubmitButton
+        className="w-fit"
+        disabled={Boolean(thumbnailError)}
+        pendingLabel={exercise ? "Saving exercise..." : "Creating exercise..."}
+      >
         {exercise ? "Save exercise" : "Create exercise"}
-      </Button>
+      </SubmitButton>
     </form>
   );
 }

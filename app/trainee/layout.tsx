@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Activity, LogOut } from "lucide-react";
 import { logoutAction } from "@/lib/actions/auth";
-import { Button } from "@/components/ui/button";
+import { SubmitButton } from "@/components/ui/submit-button";
 
 export default function TraineeLayout({
   children
@@ -17,10 +17,10 @@ export default function TraineeLayout({
             Sthenos
           </Link>
           <form action={logoutAction}>
-            <Button type="submit" variant="ghost">
+            <SubmitButton variant="ghost" pendingLabel="Logging out...">
               <LogOut className="h-4 w-4" aria-hidden="true" />
               Log out
-            </Button>
+            </SubmitButton>
           </form>
         </div>
       </header>

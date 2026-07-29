@@ -4,6 +4,8 @@ import { useEffect, useState, useTransition } from "react";
 import { ChevronDown, ChevronUp, GripVertical, Trash2 } from "lucide-react";
 import { ExerciseThumb } from "@/components/exercises/exercise-thumb";
 import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { Table, Td, Th } from "@/components/ui/table";
 import { removeRoutineExerciseAction, reorderRoutineExercisesAction } from "@/lib/actions/routines";
 
@@ -113,14 +115,15 @@ export function RoutineExerciseList({ routineId, routineExercises }: RoutineExer
                       </p>
                     </div>
                     <form action={removeRoutineExerciseAction.bind(null, routineId, item.id)}>
-                      <Button
-                        type="submit"
+                      <SubmitButton
                         variant="ghost"
                         className="h-8 w-8 px-0"
                         aria-label={`Remove ${exercise?.name ?? "exercise"}`}
+                        pendingLabel={`Removing ${exercise?.name ?? "exercise"}`}
+                        pendingText={null}
                       >
                         <Trash2 className="h-4 w-4" aria-hidden="true" />
-                      </Button>
+                      </SubmitButton>
                     </form>
                   </div>
                   <div className="mt-3 flex flex-wrap gap-2 text-xs">
@@ -238,14 +241,15 @@ export function RoutineExerciseList({ routineId, routineExercises }: RoutineExer
                   <Td className="max-w-64 text-muted-foreground">{item.notes ?? "No notes"}</Td>
                   <Td>
                     <form action={removeRoutineExerciseAction.bind(null, routineId, item.id)}>
-                      <Button
-                        type="submit"
+                      <SubmitButton
                         variant="ghost"
                         className="h-8 w-8 px-0"
                         aria-label={`Remove ${exercise?.name ?? "exercise"}`}
+                        pendingLabel={`Removing ${exercise?.name ?? "exercise"}`}
+                        pendingText={null}
                       >
                         <Trash2 className="h-4 w-4" aria-hidden="true" />
-                      </Button>
+                      </SubmitButton>
                     </form>
                   </Td>
                 </tr>
@@ -255,7 +259,13 @@ export function RoutineExerciseList({ routineId, routineExercises }: RoutineExer
         </Table>
       </div>
       {isPending ? (
-        <p className="text-xs text-muted-foreground" role="status">Saving exercise order...</p>
+        <p
+          className="inline-flex items-center gap-2 text-xs text-muted-foreground"
+          role="status"
+        >
+          <Spinner className="h-3.5 w-3.5" />
+          Saving exercise order...
+        </p>
       ) : null}
     </div>
   );

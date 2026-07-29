@@ -1,6 +1,6 @@
 import { createRoutineAction } from "@/lib/actions/routines";
-import { Button } from "@/components/ui/button";
 import { Field, Input, Select, Textarea } from "@/components/ui/field";
+import { SubmitButton } from "@/components/ui/submit-button";
 
 export function RoutineForm() {
   return (
@@ -22,9 +22,9 @@ export function RoutineForm() {
           <Input name="default_cycles" type="number" min={1} max={12} defaultValue={3} required />
         </Field>
       </div>
-      <Button type="submit" className="w-fit">
+      <SubmitButton className="w-fit" pendingLabel="Creating routine...">
         Create routine
-      </Button>
+      </SubmitButton>
     </form>
   );
 }

@@ -1,6 +1,6 @@
 import { Mail } from "lucide-react";
 import { inviteTraineeAction } from "@/lib/actions/trainee-invites";
-import { Button } from "@/components/ui/button";
+import { SubmitButton } from "@/components/ui/submit-button";
 
 type TraineeInviteFormProps = {
   clientId: string;
@@ -30,10 +30,14 @@ export function TraineeInviteForm({
                 : "Send an email invite so this trainee can set a password."}
           </p>
         </div>
-        <Button type="submit" variant="secondary" disabled={disabled}>
+        <SubmitButton
+          variant="secondary"
+          disabled={disabled}
+          pendingLabel={invitedAt ? "Resending invite..." : "Sending invite..."}
+        >
           <Mail className="h-4 w-4" aria-hidden="true" />
           {invitedAt ? "Resend invite" : "Send invite"}
-        </Button>
+        </SubmitButton>
       </div>
       {!email ? (
         <p className="mt-3 text-sm text-destructive">Add an email before inviting this trainee.</p>

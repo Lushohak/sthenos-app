@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Activity, BarChart3, Dumbbell, LayoutDashboard, Library, Users } from "lucide-react";
 import { logoutAction } from "@/lib/actions/auth";
-import { Button } from "@/components/ui/button";
+import { SubmitButton } from "@/components/ui/submit-button";
 
 const links = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -34,9 +34,13 @@ export function Sidebar() {
         })}
       </nav>
       <form action={logoutAction} className="mt-auto pt-6">
-        <Button type="submit" variant="ghost" className="w-full justify-start">
+        <SubmitButton
+          variant="ghost"
+          className="w-full justify-start"
+          pendingLabel="Logging out..."
+        >
           Log out
-        </Button>
+        </SubmitButton>
       </form>
     </aside>
   );

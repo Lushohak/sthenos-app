@@ -1,6 +1,6 @@
 import { createClientAction, updateClientAction } from "@/lib/actions/clients";
-import { Button } from "@/components/ui/button";
 import { Field, Input, Select, Textarea } from "@/components/ui/field";
+import { SubmitButton } from "@/components/ui/submit-button";
 import type { Database } from "@/types/database";
 
 type Client = Database["public"]["Tables"]["clients"]["Row"];
@@ -38,9 +38,12 @@ export function ClientForm({ client }: ClientFormProps) {
       <Field label="Notes">
         <Textarea name="notes" defaultValue={client?.notes ?? ""} />
       </Field>
-      <Button type="submit" className="w-fit">
+      <SubmitButton
+        className="w-fit"
+        pendingLabel={client ? "Saving client..." : "Creating client..."}
+      >
         {client ? "Save client" : "Create client"}
-      </Button>
+      </SubmitButton>
       {/* TODO: Add client login invitation and portal access controls here. */}
     </form>
   );

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { loginAction, signUpAction } from "@/lib/actions/auth";
-import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
+import { SubmitButton } from "@/components/ui/submit-button";
 
 type AuthFormProps = {
   mode: "login" | "sign-up";
@@ -29,7 +29,11 @@ export function AuthForm({ mode, error }: AuthFormProps) {
       <Field label="Password">
         <Input name="password" type="password" autoComplete={isSignUp ? "new-password" : "current-password"} required minLength={6} />
       </Field>
-      <Button type="submit">{isSignUp ? "Create account" : "Log in"}</Button>
+      <SubmitButton
+        pendingLabel={isSignUp ? "Creating account..." : "Logging in..."}
+      >
+        {isSignUp ? "Create account" : "Log in"}
+      </SubmitButton>
       <p className="text-center text-sm text-muted-foreground">
         {isSignUp ? "Already have an account?" : "Need an account?"}{" "}
         <Link className="font-medium text-primary" href={isSignUp ? "/auth/login" : "/auth/sign-up"}>

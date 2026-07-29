@@ -1,8 +1,8 @@
 "use client";
 
 import { addRoutineExerciseAction } from "@/lib/actions/routines";
-import { Button } from "@/components/ui/button";
 import { Field, Input, Textarea } from "@/components/ui/field";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { ExerciseThumb } from "@/components/exercises/exercise-thumb";
 import type { Database } from "@/types/database";
 
@@ -54,9 +54,9 @@ export function RoutineExerciseForm({
       <Field label="Notes">
         <Textarea name="notes" />
       </Field>
-      <Button type="submit" className="w-fit">
+      <SubmitButton className="w-fit" pendingLabel="Adding exercise...">
         Add exercise
-      </Button>
+      </SubmitButton>
     </form>
   );
 }
