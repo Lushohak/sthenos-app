@@ -2,6 +2,7 @@
 
 import {
   useActionState,
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -17,6 +18,8 @@ import {
   Maximize2,
   PlayCircle,
   Trophy,
+  Volume2,
+  VolumeX,
   X
 } from "lucide-react";
 import {
@@ -69,6 +72,8 @@ const initialActionState: TraineeWorkoutLogState = {
   message: ""
 };
 
+const WORKOUT_SOUND_STORAGE_KEY = "sthenos:workout-sound-enabled";
+
 function getLocalDateValue() {
   const now = new Date();
   const year = now.getFullYear();
@@ -102,6 +107,8 @@ export function WorkoutPlayer({
     [cycleCount, exercises, routineId]
   );
   const touchStart = useRef<{ x: number; y: number } | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const hasPlayedRestChimeRef = useRef(false);
   const [phase, setPhase] = useState<WorkoutPhase>("exercise");
   const [stepIndex, setStepIndex] = useState(0);
   const [startedAt, setStartedAt] = useState(() => Date.now());
@@ -111,6 +118,7 @@ export function WorkoutPlayer({
   const [isExitModalOpen, setIsExitModalOpen] = useState(false);
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const [isToastOpen, setIsToastOpen] = useState(false);
+  const [isSoundEnabled, setIsSoundEnabled] = useState(true);
   const [localToday, setLocalToday] = useState(today);
   const [trainingDate, setTrainingDate] = useState(today);
   const [actionState, formAction, isPending] = useActionState(
@@ -138,6 +146,132 @@ export function WorkoutPlayer({
     1,
     Math.round((Date.now() - startedAt) / 60_000)
   );
+
+  const getOrCreateAudioContext = useCallback(() => {
+    const currentContext = audioContextRef.current;
+    if (currentContext && currentContext.state !== "closed") {
+      return currentContext;
+    }
+
+    const AudioContextConstructor =
+      window.AudioContext ??
+      (
+        window as typeof window & {
+          webkitAudioContext?: typeof AudioContext;
+        }
+      ).webkitAudioContext;
+
+    if (!AudioContextConstructor) return null;
+
+    const context = new AudioContextConstructor();
+    audioContextRef.current = context;
+    return context;
+  }, []);
+
+  const unlockWorkoutAudio = useCallback(() => {
+    if (!isSoundEnabled) return;
+
+    const context = getOrCreateAudioContext();
+    if (context?.state === "suspended") {
+      void context.resume().catch(() => {
+        // The visual timer remains the fallback when a browser blocks audio.
+      });
+    }
+  }, [getOrCreateAudioContext, isSoundEnabled]);
+
+  const playRestCompleteChime = useCallback(() => {
+    if (!isSoundEnabled) return;
+
+    const context = getOrCreateAudioContext();
+    if (!context) return;
+
+    function scheduleBell() {
+      if (!context || context.state !== "running") return;
+
+      const strikeTime = context.currentTime + 0.02;
+      const masterGain = context.createGain();
+      const strikeOffsets = [0, 0.34, 0.68];
+      const bellPartials = [
+        { frequency: 988, volume: 0.24, decay: 0.78 },
+        { frequency: 1985, volume: 0.16, decay: 0.67 },
+        { frequency: 2696, volume: 0.11, decay: 0.53 },
+        { frequency: 3902, volume: 0.075, decay: 0.4 },
+        { frequency: 5117, volume: 0.05, decay: 0.3 },
+        { frequency: 6362, volume: 0.035, decay: 0.22 }
+      ];
+
+      masterGain.gain.setValueAtTime(0.85, strikeTime);
+      masterGain.gain.setValueAtTime(0.85, strikeTime + 1.3);
+      masterGain.gain.exponentialRampToValueAtTime(0.0001, strikeTime + 1.55);
+      masterGain.connect(context.destination);
+
+      // Inharmonic partials give the synthesized tone a metallic bell character.
+      strikeOffsets.forEach((offset) => {
+        const currentStrikeTime = strikeTime + offset;
+
+        bellPartials.forEach(({ frequency, volume, decay }) => {
+          const oscillator = context.createOscillator();
+          const gain = context.createGain();
+
+          oscillator.type = "sine";
+          oscillator.frequency.setValueAtTime(
+            frequency * 1.012,
+            currentStrikeTime
+          );
+          oscillator.frequency.exponentialRampToValueAtTime(
+            frequency,
+            currentStrikeTime + 0.035
+          );
+          gain.gain.setValueAtTime(0.0001, currentStrikeTime);
+          gain.gain.exponentialRampToValueAtTime(
+            volume,
+            currentStrikeTime + 0.004
+          );
+          gain.gain.exponentialRampToValueAtTime(
+            0.0001,
+            currentStrikeTime + decay
+          );
+          oscillator.connect(gain);
+          gain.connect(masterGain);
+          oscillator.start(currentStrikeTime);
+          oscillator.stop(currentStrikeTime + decay + 0.05);
+        });
+      });
+    }
+
+    if (context.state === "suspended") {
+      void context
+        .resume()
+        .then(scheduleBell)
+        .catch(() => {
+          // The visual timer remains the fallback when a browser blocks audio.
+        });
+      return;
+    }
+
+    scheduleBell();
+  }, [getOrCreateAudioContext, isSoundEnabled]);
+
+  useEffect(() => {
+    try {
+      const savedPreference = window.localStorage.getItem(
+        WORKOUT_SOUND_STORAGE_KEY
+      );
+      if (savedPreference !== null) {
+        setIsSoundEnabled(savedPreference === "true");
+      }
+    } catch {
+      // Sound defaults to on when preferences cannot be persisted.
+    }
+
+    return () => {
+      const context = audioContextRef.current;
+      if (context && context.state !== "closed") {
+        void context.close();
+      }
+      audioContextRef.current = null;
+    };
+  }, []);
 
   useEffect(() => {
     const currentLocalDate = getLocalDateValue();
@@ -229,6 +363,10 @@ export function WorkoutPlayer({
       setRestSecondsRemaining(remaining);
 
       if (remaining === 0) {
+        if (!hasPlayedRestChimeRef.current) {
+          hasPlayedRestChimeRef.current = true;
+          playRestCompleteChime();
+        }
         setStepIndex((current) => Math.min(current + 1, totalSteps - 1));
         setRestEndsAt(null);
         setPhase("exercise");
@@ -238,7 +376,7 @@ export function WorkoutPlayer({
     updateTimer();
     const intervalId = window.setInterval(updateTimer, 250);
     return () => window.clearInterval(intervalId);
-  }, [phase, restEndsAt, totalSteps]);
+  }, [phase, playRestCompleteChime, restEndsAt, totalSteps]);
 
   useEffect(() => {
     if (actionState.status !== "success") return;
@@ -252,6 +390,7 @@ export function WorkoutPlayer({
   }, [actionState.status, storageKey]);
 
   function advanceAfterRest() {
+    hasPlayedRestChimeRef.current = true;
     setStepIndex((current) => Math.min(current + 1, totalSteps - 1));
     setRestEndsAt(null);
     setRestSecondsRemaining(0);
@@ -260,6 +399,7 @@ export function WorkoutPlayer({
 
   function handleExerciseDone() {
     if (!currentExercise) return;
+    unlockWorkoutAudio();
 
     if (stepIndex >= totalSteps - 1) {
       setPhase("summary");
@@ -267,6 +407,7 @@ export function WorkoutPlayer({
     }
 
     if (currentExercise.restSeconds && currentExercise.restSeconds > 0) {
+      hasPlayedRestChimeRef.current = false;
       const endTime = Date.now() + currentExercise.restSeconds * 1000;
       setRestEndsAt(endTime);
       setRestSecondsRemaining(currentExercise.restSeconds);
@@ -285,12 +426,36 @@ export function WorkoutPlayer({
     }
 
     if (phase === "rest") {
+      hasPlayedRestChimeRef.current = true;
       setRestEndsAt(null);
       setPhase("exercise");
       return;
     }
 
     setStepIndex((current) => Math.max(current - 1, 0));
+  }
+
+  function toggleWorkoutSound() {
+    const nextValue = !isSoundEnabled;
+    setIsSoundEnabled(nextValue);
+
+    try {
+      window.localStorage.setItem(
+        WORKOUT_SOUND_STORAGE_KEY,
+        String(nextValue)
+      );
+    } catch {
+      // The setting still applies for the current workout.
+    }
+
+    if (nextValue) {
+      const context = getOrCreateAudioContext();
+      if (context?.state === "suspended") {
+        void context.resume().catch(() => {
+          // The visual timer remains the fallback when a browser blocks audio.
+        });
+      }
+    }
   }
 
   if (!exercises.length) {
@@ -351,16 +516,39 @@ export function WorkoutPlayer({
             </p>
             <h1 className="truncate text-xl font-semibold sm:text-2xl">{routineName}</h1>
           </div>
-          <Button
-            type="button"
-            variant="ghost"
-            className="shrink-0"
-            disabled={isPending}
-            onClick={() => setIsExitModalOpen(true)}
-          >
-            <X className="h-4 w-4" aria-hidden="true" />
-            Exit
-          </Button>
+          <div className="flex shrink-0 items-center gap-1">
+            <Button
+              type="button"
+              variant="ghost"
+              className="px-3"
+              aria-label={
+                isSoundEnabled
+                  ? "Turn rest timer sound off"
+                  : "Turn rest timer sound on"
+              }
+              aria-pressed={isSoundEnabled}
+              onClick={toggleWorkoutSound}
+            >
+              {isSoundEnabled ? (
+                <Volume2 className="h-4 w-4" aria-hidden="true" />
+              ) : (
+                <VolumeX className="h-4 w-4" aria-hidden="true" />
+              )}
+              <span className="hidden sm:inline">
+                {isSoundEnabled ? "Sound on" : "Sound off"}
+              </span>
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              className="px-3"
+              disabled={isPending}
+              onClick={() => setIsExitModalOpen(true)}
+            >
+              <X className="h-4 w-4" aria-hidden="true" />
+              Exit
+            </Button>
+          </div>
         </div>
 
         <div
