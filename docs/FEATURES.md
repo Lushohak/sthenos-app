@@ -1,6 +1,6 @@
 # Sthenos feature inventory
 
-Last reviewed: July 30, 2026
+Last reviewed: July 31, 2026
 
 This document describes functionality that is present in the application
 today. Checked items are implemented. Unchecked items under **Development
@@ -171,6 +171,8 @@ cannot submit their own measurements or progress photos.
 - [x] Supabase row-level security for coach ownership and trainee access.
 - [x] Database migrations committed under `supabase/migrations`.
 - [x] Exercise media stored in a coach-scoped Supabase Storage path.
+- [x] Local Playwright smoke tests for authentication, role and coach ownership
+  protection, invitations, assignment, guided workouts, and completion history.
 
 ## Development opportunities
 
@@ -181,8 +183,8 @@ These are the clearest gaps revealed by the current workflows.
 - [ ] Add repeatable local demo seed data.
 - [ ] Configure a non-interactive ESLint check for local development and CI.
 - [ ] Add automated unit and integration tests for Server Actions.
-- [ ] Add end-to-end tests for invitation, routine assignment, guided workout,
-  and workout completion.
+- [ ] Expand end-to-end coverage to progress entry, bulk assignment, exercise
+  archival, mobile viewports, and WebKit.
 - [ ] Add production error monitoring and product analytics.
 
 ### Routine workflow

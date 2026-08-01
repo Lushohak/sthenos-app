@@ -8,7 +8,8 @@ complete guided workouts, and review their progress.
 
 For a detailed inventory of the functionality currently implemented, known
 product boundaries, and possible next development areas, see
-[docs/FEATURES.md](docs/FEATURES.md).
+[docs/FEATURES.md](docs/FEATURES.md). Test architecture and contribution
+guidance are documented in [docs/TESTING.md](docs/TESTING.md).
 
 ## Tech stack
 
@@ -18,6 +19,7 @@ product boundaries, and possible next development areas, see
 - [Tailwind CSS](https://tailwindcss.com/)
 - [Supabase](https://supabase.com/) for PostgreSQL, authentication, storage,
   and row-level security
+- [Playwright](https://playwright.dev/) for browser-based end-to-end tests
 - [Lucide React](https://lucide.dev/) for icons
 
 ## Local development
@@ -94,6 +96,32 @@ npm run dev
 Open [http://localhost:3000](http://localhost:3000). Create a coach account at
 `/auth/sign-up`, then use the coach dashboard to create trainees, exercises,
 and routines.
+
+## End-to-end tests
+
+The Playwright suite runs against the local Supabase stack and starts its own
+Next.js server on `http://127.0.0.1:3100`. Docker Desktop must be running.
+
+```bash
+npm run supabase:start
+npm run test:e2e
+```
+
+The test environment reads the generated local Supabase credentials directly
+from the CLI. It refuses to run database fixtures against a non-local Supabase
+URL. Invitation tests use local Mailpit rather than Resend or another production
+SMTP provider.
+
+Useful test variants:
+
+```bash
+npm run test:e2e:smoke   # Run the critical-path suite
+npm run test:e2e:headed  # Watch the browser while tests run
+npm run test:e2e:ui      # Open Playwright's interactive test runner
+npm run supabase:stop    # Stop the local backend when finished
+```
+
+See [docs/TESTING.md](docs/TESTING.md) for covered scenarios and fixture rules.
 
 ## Useful commands
 
