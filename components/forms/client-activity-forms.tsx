@@ -19,7 +19,7 @@ type Props = {
 
 export function WorkoutLogForm({ clientId, assignments }: Pick<Props, "clientId" | "assignments">) {
   return (
-    <form action={createWorkoutLogAction.bind(null, clientId)} className="grid gap-4 rounded-md border bg-white p-4 shadow-soft">
+    <form action={createWorkoutLogAction.bind(null, clientId)} className="grid gap-4 rounded-md border bg-card p-4 shadow-soft">
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Date trained">
           <Input name="trained_on" type="date" defaultValue={new Date().toISOString().slice(0, 10)} required />
@@ -49,7 +49,7 @@ export function WorkoutLogForm({ clientId, assignments }: Pick<Props, "clientId"
 
 export function BodyProgressForm({ clientId }: Pick<Props, "clientId">) {
   return (
-    <form action={createBodyProgressAction.bind(null, clientId)} className="grid gap-4 rounded-md border bg-white p-4 shadow-soft">
+    <form action={createBodyProgressAction.bind(null, clientId)} className="grid gap-4 rounded-md border bg-card p-4 shadow-soft">
       <div className="grid gap-4 sm:grid-cols-3">
         <Field label="Recorded on">
           <Input name="recorded_on" type="date" defaultValue={new Date().toISOString().slice(0, 10)} required />

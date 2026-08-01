@@ -48,7 +48,7 @@ export function MuscleMultiSelect({
       ))}
       <div
         className={cn(
-          "flex min-h-10 w-full items-center justify-between gap-2 rounded-md border bg-white px-3 py-2 text-left text-sm shadow-soft outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15",
+          "flex min-h-10 w-full items-center justify-between gap-2 rounded-md border border-border-emphasis bg-background-secondary px-3 py-2 text-left text-sm shadow-soft outline-none transition-colors focus-within:border-focus focus-within:ring-2 focus-within:ring-focus/25",
           !selected.length && "text-muted-foreground"
         )}
         tabIndex={-1}
@@ -65,7 +65,7 @@ export function MuscleMultiSelect({
                 <button
                   type="button"
                   aria-label={`Remove ${muscle}`}
-                  className="rounded-full p-0.5 text-muted-foreground transition hover:bg-white hover:text-foreground"
+                  className="rounded-full p-0.5 text-muted-foreground transition hover:bg-elevated hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
                   onClick={(event) => {
                     event.stopPropagation();
                     removeOption(muscle);
@@ -81,7 +81,7 @@ export function MuscleMultiSelect({
         </span>
         <button
           type="button"
-          className="rounded-md p-1 text-muted-foreground transition hover:bg-muted hover:text-foreground focus:outline-none focus:ring-2 focus:ring-primary/15"
+          className="rounded-md p-1 text-muted-foreground transition hover:bg-elevated hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
           aria-label="Open primary muscle options"
           aria-expanded={isOpen}
           onClick={(event) => {
@@ -93,7 +93,7 @@ export function MuscleMultiSelect({
         </button>
       </div>
       {isOpen ? (
-        <div className="absolute z-20 mt-2 max-h-64 w-full overflow-y-auto rounded-md border bg-white p-1 text-sm shadow-soft">
+        <div className="absolute z-20 mt-2 max-h-64 w-full overflow-y-auto rounded-md border border-border-emphasis bg-elevated p-1 text-sm shadow-elevated">
           {availableOptions.length ? (
             availableOptions.map((option) => (
               <button

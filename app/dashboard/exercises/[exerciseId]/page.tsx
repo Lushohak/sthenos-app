@@ -28,7 +28,7 @@ export default async function ExerciseDetailPage({ params }: PageProps) {
         action={<LinkButton href={`/dashboard/exercises/${exercise.id}/edit`}>Edit exercise</LinkButton>}
       />
       <section className="max-w-2xl">
-        <div className="rounded-md border bg-white p-4 shadow-soft">
+        <div className="rounded-md border bg-card p-4 shadow-soft">
           <ExerciseThumb src={exercise.thumbnail_url} alt={exercise.name} />
           <dl className="mt-4 grid gap-3 text-sm">
             <div>
@@ -55,7 +55,7 @@ export default async function ExerciseDetailPage({ params }: PageProps) {
               <div>
                 <dt className="text-muted-foreground">Video</dt>
                 <dd>
-                  <a className="inline-flex items-center gap-1 text-primary" href={exercise.video_url} target="_blank" rel="noreferrer">
+                  <a className="inline-flex items-center gap-1 text-info hover:text-info/80" href={exercise.video_url} target="_blank" rel="noreferrer">
                     Open video <ExternalLink className="h-3 w-3" aria-hidden="true" />
                   </a>
                 </dd>

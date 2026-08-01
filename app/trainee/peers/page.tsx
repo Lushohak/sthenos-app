@@ -32,7 +32,7 @@ export default async function TraineePeersPage() {
         description="Meet the other active trainees working with your coach."
       />
 
-      <div className="mb-6 rounded-lg border border-primary/20 bg-primary/5 px-4 py-3 text-sm text-muted-foreground">
+      <div className="mb-6 rounded-lg border border-info/30 bg-info/5 px-4 py-3 text-sm text-muted-foreground">
         To protect everyone&apos;s privacy, this page only shares trainee names. Progress,
         measurements, contact details, and coach notes always remain private.
       </div>
@@ -41,7 +41,7 @@ export default async function TraineePeersPage() {
         <section aria-labelledby="peer-list-title">
           <div className="mb-4 flex items-center justify-between gap-4">
             <h2 id="peer-list-title" className="flex items-center gap-2 text-lg font-semibold">
-              <Users className="h-5 w-5 text-primary" aria-hidden="true" />
+              <Users className="h-5 w-5 text-info" aria-hidden="true" />
               Your training community
             </h2>
             <span className="rounded-full bg-muted px-3 py-1 text-sm text-muted-foreground">
@@ -52,10 +52,10 @@ export default async function TraineePeersPage() {
             {peers.map((peer, index) => (
               <li
                 key={`${peer.name}-${index}`}
-                className="flex items-center gap-4 rounded-xl border bg-white p-4 shadow-soft"
+                className="flex items-center gap-4 rounded-xl border bg-card p-4 shadow-soft"
               >
                 <span
-                  className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary/10 font-semibold text-primary"
+                  className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-secondary/15 font-semibold text-secondary-hover"
                   aria-hidden="true"
                 >
                   {getInitials(peer.name)}
@@ -69,7 +69,7 @@ export default async function TraineePeersPage() {
           </ul>
         </section>
       ) : (
-        <div className="rounded-xl border border-dashed bg-white p-10 text-center shadow-soft">
+        <div className="rounded-xl border border-dashed bg-card p-10 text-center shadow-soft">
           <UserRound className="mx-auto h-9 w-9 text-muted-foreground" aria-hidden="true" />
           <p className="mt-3 font-medium">No peers to show yet</p>
           <p className="mx-auto mt-1 max-w-md text-sm text-muted-foreground">

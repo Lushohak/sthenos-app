@@ -11,7 +11,7 @@ export default function TraineeLayout({
 }) {
   return (
     <div className="min-h-dvh">
-      <header className="border-b bg-white">
+      <header className="border-b bg-card">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
           <Link href="/trainee" className="flex items-center gap-2 text-lg font-semibold">
             <Activity className="h-5 w-5 text-primary" aria-hidden="true" />

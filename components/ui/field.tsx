@@ -18,7 +18,7 @@ export function Field({ label, hint, children }: FieldProps) {
 }
 
 const control =
-  "h-10 w-full rounded-md border bg-white px-3 text-sm text-foreground shadow-soft outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/15";
+  "h-10 w-full rounded-md border border-border-emphasis bg-background-secondary px-3 text-sm text-foreground shadow-soft outline-none transition-colors placeholder:text-disabled-foreground focus:border-focus focus:ring-2 focus:ring-focus/25 disabled:cursor-not-allowed disabled:border-border disabled:bg-elevated disabled:text-disabled-foreground";
 
 export function Input({ className, ...props }: InputHTMLAttributes<HTMLInputElement>) {
   return <input className={cn(control, className)} {...props} />;

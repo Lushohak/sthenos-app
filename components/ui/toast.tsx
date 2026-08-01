@@ -18,18 +18,18 @@ type ToastProps = {
 const variants = {
   success: {
     icon: CheckCircle2,
-    className: "border-primary/30",
-    iconClassName: "text-primary"
+    className: "border-success/50 border-l-4",
+    iconClassName: "text-success"
   },
   error: {
     icon: AlertCircle,
-    className: "border-destructive/30",
+    className: "border-destructive/50 border-l-4",
     iconClassName: "text-destructive"
   },
   info: {
     icon: Info,
-    className: "border-border",
-    iconClassName: "text-foreground"
+    className: "border-info/50 border-l-4",
+    iconClassName: "text-info"
   }
 };
 
@@ -63,7 +63,7 @@ export function Toast({
     <div className="pointer-events-none fixed inset-x-4 bottom-4 z-[100] flex justify-center sm:inset-x-auto sm:bottom-6 sm:right-6">
       <div
         className={cn(
-          "pointer-events-auto flex w-full max-w-sm items-start gap-3 rounded-xl border bg-white p-4 shadow-2xl",
+          "pointer-events-auto flex w-full max-w-sm items-start gap-3 rounded-xl border bg-elevated p-4 shadow-elevated",
           appearance.className
         )}
         role={variant === "error" ? "alert" : "status"}

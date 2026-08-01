@@ -117,9 +117,9 @@ export function BulkAssignRoutineForm({
 
   return (
     <>
-      <section className="mb-5 rounded-xl border bg-white p-4 shadow-soft">
+      <section className="mb-5 rounded-xl border bg-card p-4 shadow-soft">
         <div className="flex items-start gap-3">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-secondary/15 text-secondary-hover">
             <Users className="h-5 w-5" aria-hidden="true" />
           </span>
           <div>
@@ -132,7 +132,7 @@ export function BulkAssignRoutineForm({
       </section>
 
       <form ref={formRef} action={formAction} className="grid gap-5">
-        <section className="overflow-hidden rounded-xl border bg-white shadow-soft">
+        <section className="overflow-hidden rounded-xl border bg-card shadow-soft">
           <div className="grid gap-3 border-b p-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
             <div className="grid gap-2">
               <label htmlFor="trainee-search" className="text-sm font-medium">
@@ -188,7 +188,7 @@ export function BulkAssignRoutineForm({
                     className={
                       isAssigned
                         ? "flex cursor-not-allowed items-start gap-3 rounded-lg border bg-muted/40 p-4 opacity-75"
-                        : "flex cursor-pointer items-start gap-3 rounded-lg border bg-white p-4 transition hover:border-primary/60 has-[:checked]:border-primary has-[:checked]:ring-2 has-[:checked]:ring-primary/15"
+                        : "flex cursor-pointer items-start gap-3 rounded-lg border bg-card p-4 transition hover:border-primary/60 has-[:checked]:border-primary has-[:checked]:ring-2 has-[:checked]:ring-primary/15"
                     }
                   >
                     <input
@@ -209,7 +209,7 @@ export function BulkAssignRoutineForm({
                       </span>
                     </span>
                     {isAssigned ? (
-                      <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium capitalize text-primary">
+                      <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-success/10 px-2.5 py-1 text-xs font-medium capitalize text-success">
                         <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
                         {trainee.existingAssignmentStatus === "active"
                           ? "Assigned"
@@ -237,7 +237,7 @@ export function BulkAssignRoutineForm({
           </fieldset>
         </section>
 
-        <section className="rounded-xl border bg-white p-4 shadow-soft">
+        <section className="rounded-xl border bg-card p-4 shadow-soft">
           <label htmlFor="bulk-assignment-notes" className="text-sm font-medium">
             Assignment note
           </label>
@@ -261,7 +261,7 @@ export function BulkAssignRoutineForm({
           </p>
         ) : null}
 
-        <div className="sticky bottom-4 z-20 flex flex-col gap-3 rounded-xl border bg-white/95 p-4 shadow-xl backdrop-blur sm:flex-row sm:items-center sm:justify-between">
+        <div className="sticky bottom-4 z-20 flex flex-col gap-3 rounded-xl border bg-card/95 p-4 shadow-xl backdrop-blur sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm text-muted-foreground">
             <span className="font-semibold text-foreground">{selectedIds.size}</span>{" "}
             {selectedIds.size === 1 ? "trainee selected" : "trainees selected"}

@@ -14,7 +14,7 @@ export function AuthForm({ mode, error }: AuthFormProps) {
   return (
     <form action={isSignUp ? signUpAction : loginAction} className="grid gap-4">
       {error ? (
-        <div className="rounded-md border border-destructive/30 bg-white px-3 py-2 text-sm text-destructive">
+        <div className="rounded-md border border-destructive/30 bg-card px-3 py-2 text-sm text-destructive">
           {error}
         </div>
       ) : null}
@@ -36,7 +36,7 @@ export function AuthForm({ mode, error }: AuthFormProps) {
       </SubmitButton>
       <p className="text-center text-sm text-muted-foreground">
         {isSignUp ? "Already have an account?" : "Need an account?"}{" "}
-        <Link className="font-medium text-primary" href={isSignUp ? "/auth/login" : "/auth/sign-up"}>
+        <Link className="font-medium text-info hover:text-info/80" href={isSignUp ? "/auth/login" : "/auth/sign-up"}>
           {isSignUp ? "Log in" : "Sign up"}
         </Link>
       </p>

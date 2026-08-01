@@ -59,7 +59,7 @@ export default async function TraineeDashboardPage() {
         description={client.goal ?? "Your coach has not set a goal yet."}
       />
       {!client.invitation_accepted_at ? (
-        <div className="mb-4 rounded-md border border-primary/25 bg-white px-4 py-3 text-sm text-primary shadow-soft">
+        <div className="mb-4 rounded-md border border-info/40 bg-info/5 px-4 py-3 text-sm text-info shadow-soft">
           Finish account setup when you are ready to keep your login secure.
         </div>
       ) : null}
@@ -97,7 +97,7 @@ export default async function TraineeDashboardPage() {
             return (
               <article
                 key={assignment.id}
-                className="overflow-hidden rounded-xl border bg-white shadow-soft"
+                className="overflow-hidden rounded-xl border bg-card shadow-soft"
               >
                 <div className="p-4 sm:p-5">
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -222,7 +222,7 @@ export default async function TraineeDashboardPage() {
             );
           })}
           {!orderedAssignments.length ? (
-            <div className="rounded-xl border border-dashed bg-white p-8 text-center shadow-soft">
+            <div className="rounded-xl border border-dashed bg-card p-8 text-center shadow-soft">
               <Dumbbell className="mx-auto h-8 w-8 text-muted-foreground" aria-hidden="true" />
               <p className="mt-3 font-medium">No routines assigned yet</p>
               <p className="mt-1 text-sm text-muted-foreground">
@@ -245,13 +245,13 @@ export default async function TraineeDashboardPage() {
                 ? log.workout_routines[0]
                 : log.workout_routines;
               return (
-                <article key={log.id} className="rounded-lg border bg-white p-4 shadow-soft">
+                <article key={log.id} className="rounded-lg border bg-card p-4 shadow-soft">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <p className="truncate font-semibold">{routine?.name ?? "Workout"}</p>
                       <p className="mt-1 text-sm text-muted-foreground">{formatDate(log.trained_on)}</p>
                     </div>
-                    <span className="shrink-0 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
+                    <span className="shrink-0 rounded-full bg-success/10 px-2.5 py-1 text-xs font-medium text-success">
                       Completed
                     </span>
                   </div>
@@ -262,7 +262,7 @@ export default async function TraineeDashboardPage() {
               );
             })}
             {!logs?.length ? (
-              <div className="rounded-lg border border-dashed bg-white p-6 text-center text-sm text-muted-foreground shadow-soft">
+              <div className="rounded-lg border border-dashed bg-card p-6 text-center text-sm text-muted-foreground shadow-soft">
                 No completed workouts logged yet.
               </div>
             ) : null}
@@ -302,7 +302,7 @@ export default async function TraineeDashboardPage() {
           <h2 className="mb-3 text-lg font-semibold">Body progress</h2>
           <div className="grid gap-3 md:hidden">
             {progress?.map((entry) => (
-              <article key={entry.id} className="rounded-lg border bg-white p-4 shadow-soft">
+              <article key={entry.id} className="rounded-lg border bg-card p-4 shadow-soft">
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
@@ -332,7 +332,7 @@ export default async function TraineeDashboardPage() {
               </article>
             ))}
             {!progress?.length ? (
-              <div className="rounded-lg border border-dashed bg-white p-6 text-center text-sm text-muted-foreground shadow-soft">
+              <div className="rounded-lg border border-dashed bg-card p-6 text-center text-sm text-muted-foreground shadow-soft">
                 No body progress entries yet.
               </div>
             ) : null}

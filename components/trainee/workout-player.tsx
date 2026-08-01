@@ -460,7 +460,7 @@ export function WorkoutPlayer({
 
   if (!exercises.length) {
     return (
-      <section className="mx-auto max-w-xl rounded-xl border border-dashed bg-white p-8 text-center shadow-soft">
+      <section className="mx-auto max-w-xl rounded-xl border border-dashed bg-card p-8 text-center shadow-soft">
         <Flag className="mx-auto h-9 w-9 text-muted-foreground" aria-hidden="true" />
         <h1 className="mt-3 text-xl font-semibold">This workout is not ready yet</h1>
         <p className="mt-2 text-sm text-muted-foreground">
@@ -476,8 +476,8 @@ export function WorkoutPlayer({
   if (actionState.status === "success") {
     return (
       <>
-        <section className="mx-auto max-w-xl rounded-xl border bg-white p-6 text-center shadow-soft sm:p-8">
-          <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-primary">
+        <section className="mx-auto max-w-xl rounded-xl border bg-card p-6 text-center shadow-soft sm:p-8">
+          <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-success/10 text-success">
             <Trophy className="h-8 w-8" aria-hidden="true" />
           </span>
           <h1 className="mt-4 text-2xl font-semibold">Workout saved</h1>
@@ -569,7 +569,7 @@ export function WorkoutPlayer({
           <>
             <div
               key={`${round}-${currentExercise.id}`}
-              className="touch-pan-y overflow-hidden rounded-xl border bg-white shadow-soft"
+              className="touch-pan-y overflow-hidden rounded-xl border bg-card shadow-soft"
               onTouchStart={(event) => {
                 const touch = event.changedTouches[0];
                 touchStart.current = touch
@@ -605,7 +605,7 @@ export function WorkoutPlayer({
               {currentExercise.thumbnailUrl ? (
                 <button
                   type="button"
-                  className="group relative block w-full overflow-hidden rounded-md outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                  className="group relative block w-full overflow-hidden rounded-md outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-card"
                   aria-label={`View the full image for ${currentExercise.name}`}
                   aria-haspopup="dialog"
                   onClick={() => setIsImageModalOpen(true)}
@@ -615,7 +615,7 @@ export function WorkoutPlayer({
                     alt={currentExercise.name}
                     className="aspect-video h-52 w-full transition group-hover:brightness-90 sm:h-72"
                   />
-                  <span className="absolute bottom-3 right-3 inline-flex items-center gap-2 rounded-full bg-foreground/80 px-3 py-1.5 text-xs font-medium text-white shadow-lg backdrop-blur-sm">
+                  <span className="absolute bottom-3 right-3 inline-flex items-center gap-2 rounded-full bg-background/85 px-3 py-1.5 text-xs font-medium text-foreground shadow-lg backdrop-blur-sm">
                     <Maximize2 className="h-3.5 w-3.5" aria-hidden="true" />
                     View full image
                   </span>
@@ -655,7 +655,7 @@ export function WorkoutPlayer({
                 </div>
               </div>
               {currentExercise.notes ? (
-                <div className="mx-auto mt-4 max-w-xl rounded-lg border border-primary/20 bg-primary/5 p-4 text-sm">
+                <div className="mx-auto mt-4 max-w-xl rounded-lg border border-info/30 bg-info/5 p-4 text-sm">
                   <span className="font-medium">Coach instruction:</span>{" "}
                   {currentExercise.notes}
                 </div>
@@ -665,7 +665,7 @@ export function WorkoutPlayer({
                   href={currentExercise.videoUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="mx-auto mt-4 flex h-10 w-fit items-center justify-center gap-2 rounded-md border px-4 text-sm font-medium text-primary transition hover:bg-muted"
+                  className="mx-auto mt-4 flex h-10 w-fit items-center justify-center gap-2 rounded-md border border-border-emphasis bg-elevated px-4 text-sm font-medium text-info transition-colors hover:border-secondary hover:bg-secondary/20"
                 >
                   <PlayCircle className="h-4 w-4" aria-hidden="true" />
                   Watch demo
@@ -674,7 +674,7 @@ export function WorkoutPlayer({
               ) : null}
               </div>
             </div>
-            <div className="fixed inset-x-0 bottom-0 z-40 border-t bg-white/95 p-3 shadow-2xl backdrop-blur sm:static sm:mt-4 sm:rounded-xl sm:border sm:shadow-soft">
+            <div className="fixed inset-x-0 bottom-0 z-40 border-t bg-card/95 p-3 shadow-2xl backdrop-blur sm:static sm:mt-4 sm:rounded-xl sm:border sm:shadow-soft">
               <div className="mx-auto grid max-w-3xl grid-cols-2 gap-2 sm:flex sm:items-center sm:justify-between">
                 <Button
                   type="button"
@@ -702,8 +702,8 @@ export function WorkoutPlayer({
         ) : null}
 
         {phase === "rest" ? (
-          <div className="rounded-xl border bg-white p-6 text-center shadow-soft sm:p-10">
-            <Clock3 className="mx-auto h-9 w-9 text-primary" aria-hidden="true" />
+          <div className="rounded-xl border bg-card p-6 text-center shadow-soft sm:p-10">
+            <Clock3 className="mx-auto h-9 w-9 text-warning" aria-hidden="true" />
             <p className="mt-4 text-sm font-medium uppercase tracking-wide text-muted-foreground">
               Rest before the next exercise
             </p>
@@ -729,9 +729,9 @@ export function WorkoutPlayer({
         ) : null}
 
         {phase === "summary" ? (
-          <div className="rounded-xl border bg-white p-5 shadow-soft sm:p-7">
+          <div className="rounded-xl border bg-card p-5 shadow-soft sm:p-7">
             <div className="text-center">
-              <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-success/10 text-success">
                 <Trophy className="h-7 w-7" aria-hidden="true" />
               </span>
               <h2 className="mt-4 text-2xl font-semibold">Workout complete</h2>

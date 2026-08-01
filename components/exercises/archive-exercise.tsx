@@ -56,7 +56,7 @@ export function ArchiveExercise({
 
   return (
     <section className="mt-10 max-w-3xl border-t pt-6">
-      <div className="rounded-md border border-destructive/25 bg-white p-4 shadow-soft">
+      <div className="rounded-md border border-destructive/25 bg-card p-4 shadow-soft">
         <h2 className="font-semibold">Archive exercise</h2>
         <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
           Hide this exercise from the library and prevent it from being added to
@@ -105,7 +105,7 @@ export function ArchiveExercise({
                       className="flex items-center justify-between gap-3 px-3 py-2.5 text-sm font-medium transition hover:bg-muted"
                     >
                       <span className="min-w-0 truncate">{routine.name}</span>
-                      <span className="inline-flex shrink-0 items-center gap-1 text-xs text-primary">
+                      <span className="inline-flex shrink-0 items-center gap-1 text-xs text-info">
                         Review
                         <ExternalLink
                           className="h-3.5 w-3.5"

@@ -3,29 +3,55 @@
 @tailwind utilities;
 
 :root {
-  --background: 210 20% 98%;
-  --foreground: 222 47% 11%;
-  --card: 0 0% 100%;
-  --card-foreground: 222 47% 11%;
-  --muted: 210 16% 93%;
-  --muted-foreground: 215 16% 43%;
-  --border: 214 22% 88%;
-  --primary: 172 66% 31%;
-  --primary-foreground: 0 0% 100%;
-  --destructive: 0 72% 45%;
+  color-scheme: dark;
+  --background: 11 13 16;
+  --background-secondary: 17 21 26;
+  --card: 24 29 36;
+  --card-foreground: 241 243 245;
+  --elevated: 32 39 49;
+  --border: 48 57 70;
+  --border-emphasis: 89 101 117;
+  --foreground: 241 243 245;
+  --muted: 32 39 49;
+  --muted-foreground: 168 176 188;
+  --disabled-foreground: 104 114 128;
+  --primary: 228 199 104;
+  --primary-hover: 240 215 125;
+  --primary-pressed: 190 163 79;
+  --primary-foreground: 11 13 16;
+  --focus: 245 220 135;
+  --secondary: 113 128 150;
+  --secondary-hover: 141 153 170;
+  --success: 52 211 153;
+  --destructive: 251 113 133;
+  --warning: 245 158 11;
+  --info: 96 165 250;
+  --shadow: 0 0 0;
 }
 
 * {
-  border-color: hsl(var(--border));
+  border-color: rgb(var(--border));
 }
 
 body {
-  background: hsl(var(--background));
-  color: hsl(var(--foreground));
+  min-height: 100dvh;
+  background: rgb(var(--background));
+  color: rgb(var(--foreground));
+}
+
+::selection {
+  background: rgb(var(--primary));
+  color: rgb(var(--primary-foreground));
 }
 
 input,
 textarea,
 select {
   font: inherit;
+}
+
+a:focus-visible {
+  border-radius: 0.25rem;
+  outline: 2px solid rgb(var(--focus));
+  outline-offset: 2px;
 }

@@ -57,7 +57,7 @@ export function RoutineExerciseForm({
   }, [filteredExercises, selectedExerciseId]);
 
   return (
-    <form action={addRoutineExerciseAction.bind(null, routineId)} className="grid gap-4 rounded-md border bg-white p-4 shadow-soft">
+    <form action={addRoutineExerciseAction.bind(null, routineId)} className="grid gap-4 rounded-md border bg-card p-4 shadow-soft">
       <input name="position" type="hidden" value={nextPosition} />
       <div className="grid gap-2">
         <label htmlFor="exercise-search" className="text-sm font-medium">
@@ -90,7 +90,7 @@ export function RoutineExerciseForm({
         <legend className="text-sm font-medium">Choose an exercise</legend>
         <div className="grid max-h-[28rem] gap-3 overflow-y-auto pr-1">
           {filteredExercises.map((exercise) => (
-            <label key={exercise.id} className="grid cursor-pointer grid-cols-[6rem_1fr] gap-3 rounded-md border bg-white p-2 transition has-[:checked]:border-primary has-[:checked]:ring-2 has-[:checked]:ring-primary/15">
+            <label key={exercise.id} className="grid cursor-pointer grid-cols-[6rem_1fr] gap-3 rounded-md border bg-card p-2 transition has-[:checked]:border-primary has-[:checked]:ring-2 has-[:checked]:ring-primary/15">
               <input
                 className="sr-only"
                 name="exercise_id"

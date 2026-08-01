@@ -35,7 +35,7 @@ export default async function RoutinesPage() {
           {routines?.map((routine) => (
             <tr key={routine.id}>
               <Td>
-                <Link className="font-medium text-primary" href={`/dashboard/routines/${routine.id}`}>
+                <Link className="font-medium text-info hover:text-info/80" href={`/dashboard/routines/${routine.id}`}>
                   {routine.name}
                 </Link>
               </Td>

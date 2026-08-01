@@ -4,17 +4,17 @@ import { cn } from "@/lib/utils";
 
 const styles = {
   primary:
-    "bg-primary text-primary-foreground hover:bg-primary/90 focus-visible:outline-primary",
+    "border border-primary bg-primary text-primary-foreground hover:border-primary-hover hover:bg-primary-hover active:border-primary-pressed active:bg-primary-pressed",
   secondary:
-    "border bg-white text-foreground hover:bg-muted focus-visible:outline-primary",
+    "border border-border-emphasis bg-elevated text-foreground hover:border-secondary hover:bg-secondary/20 active:bg-secondary/30",
   ghost:
-    "text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-primary",
+    "border border-transparent text-muted-foreground shadow-none hover:bg-elevated hover:text-foreground active:bg-secondary/20",
   danger:
-    "bg-destructive text-white hover:bg-destructive/90 focus-visible:outline-destructive"
+    "border border-destructive bg-destructive text-primary-foreground hover:bg-destructive/90 active:bg-destructive/80"
 };
 
 const base =
-  "inline-flex h-10 items-center justify-center gap-2 rounded-md px-4 text-sm font-medium shadow-soft transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:pointer-events-none disabled:opacity-60";
+  "inline-flex h-10 items-center justify-center gap-2 rounded-md px-4 text-sm font-semibold shadow-soft transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:border-border disabled:bg-elevated disabled:text-disabled-foreground disabled:shadow-none";
 
 type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   variant?: keyof typeof styles;

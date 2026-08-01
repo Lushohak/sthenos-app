@@ -17,7 +17,7 @@ export default async function TraineeSetupPage({ searchParams }: PageProps) {
         title="Finish your account"
         description="Set your password and confirm the profile details your coach started."
       />
-      <form action={completeTraineeSetupAction} className="grid max-w-xl gap-4 rounded-md border bg-white p-4 shadow-soft">
+      <form action={completeTraineeSetupAction} className="grid max-w-xl gap-4 rounded-md border bg-card p-4 shadow-soft">
         {params?.error ? (
           <div className="rounded-md border border-destructive/25 px-3 py-2 text-sm text-destructive">
             {params.error}

@@ -50,7 +50,7 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
           <Link
             key={exercise.id}
             href={`/dashboard/exercises/${exercise.id}`}
-            className="rounded-md border bg-white p-3 shadow-soft transition hover:border-primary"
+            className="rounded-md border bg-card p-3 shadow-soft transition-colors hover:border-secondary"
           >
             <ExerciseThumb src={exercise.thumbnail_url} alt={exercise.name} />
             <div className="mt-3">
@@ -65,7 +65,7 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
           </Link>
         ))}
         {!exercises?.length ? (
-          <div className="rounded-md border bg-white p-4 text-sm text-muted-foreground shadow-soft">
+          <div className="rounded-md border bg-card p-4 text-sm text-muted-foreground shadow-soft">
             No exercises found.
           </div>
         ) : null}

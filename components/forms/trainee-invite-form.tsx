@@ -21,7 +21,7 @@ export function TraineeInviteForm({
   const isSetupPending = Boolean(clientUserId) && !acceptedAt;
 
   return (
-    <form action={inviteTraineeAction.bind(null, clientId)} className="rounded-md border bg-white p-4 shadow-soft">
+    <form action={inviteTraineeAction.bind(null, clientId)} className="rounded-md border bg-card p-4 shadow-soft">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="font-semibold">Trainee account</h2>

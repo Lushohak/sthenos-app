@@ -79,7 +79,7 @@ export function RoutineExerciseList({ routineId, routineExercises }: RoutineExer
 
   if (!items.length) {
     return (
-      <div className="rounded-lg border border-dashed bg-white p-8 text-center text-sm text-muted-foreground shadow-soft">
+      <div className="rounded-lg border border-dashed bg-card p-8 text-center text-sm text-muted-foreground shadow-soft">
         No exercises yet. Choose one from the list to build this routine.
       </div>
     );
@@ -92,7 +92,7 @@ export function RoutineExerciseList({ routineId, routineExercises }: RoutineExer
           const exercise = Array.isArray(item.exercises) ? item.exercises[0] : item.exercises;
 
           return (
-            <li key={item.id} className="rounded-lg border bg-white p-3 shadow-soft">
+            <li key={item.id} className="rounded-lg border bg-card p-3 shadow-soft">
               <div className="flex gap-3">
                 <ExerciseThumb
                   src={exercise?.thumbnail_url}

@@ -52,17 +52,17 @@ export default async function RoutineDetailPage({ params, searchParams }: PagePr
         }
       />
       <section className="mb-6 grid gap-4 sm:grid-cols-3">
-        <div className="rounded-md border bg-white p-4 shadow-soft">
+        <div className="rounded-md border bg-card p-4 shadow-soft">
           <p className="text-sm font-medium text-muted-foreground">Structure</p>
           <p className="mt-1 text-lg font-semibold">
             {routine.routine_type === "circuit" ? "Cycles" : "Exercise-specific repeats"}
           </p>
         </div>
-        <div className="rounded-md border bg-white p-4 shadow-soft">
+        <div className="rounded-md border bg-card p-4 shadow-soft">
           <p className="text-sm font-medium text-muted-foreground">Default cycles</p>
           <p className="mt-1 text-lg font-semibold">{routine.default_cycles}</p>
         </div>
-        <div className="rounded-md border bg-white p-4 shadow-soft">
+        <div className="rounded-md border bg-card p-4 shadow-soft">
           <p className="text-sm font-medium text-muted-foreground">Exercises</p>
           <p className="mt-1 text-lg font-semibold">{routineExercises?.length ?? 0}</p>
         </div>

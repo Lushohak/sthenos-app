@@ -47,7 +47,7 @@ export function AssignRoutineForm({
       <form
         ref={formRef}
         action={formAction}
-        className="grid gap-4 rounded-md border bg-white p-4 shadow-soft"
+        className="grid gap-4 rounded-md border bg-card p-4 shadow-soft"
         onSubmit={() => setIsToastOpen(false)}
       >
         <Field label="Routine">

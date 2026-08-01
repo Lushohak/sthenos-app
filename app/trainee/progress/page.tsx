@@ -90,7 +90,7 @@ export default async function TraineeProgressPage() {
         </h2>
         <div className="grid gap-3 md:hidden">
           {progress?.map((entry) => (
-            <article key={entry.id} className="rounded-lg border bg-white p-4 shadow-soft">
+            <article key={entry.id} className="rounded-lg border bg-card p-4 shadow-soft">
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
@@ -127,7 +127,7 @@ export default async function TraineeProgressPage() {
             </article>
           ))}
           {!progress?.length ? (
-            <div className="rounded-lg border border-dashed bg-white p-6 text-center text-sm text-muted-foreground shadow-soft">
+            <div className="rounded-lg border border-dashed bg-card p-6 text-center text-sm text-muted-foreground shadow-soft">
               No body progress entries yet.
             </div>
           ) : null}
@@ -179,7 +179,7 @@ export default async function TraineeProgressPage() {
               : log.workout_routines;
 
             return (
-              <article key={log.id} className="rounded-lg border bg-white p-4 shadow-soft">
+              <article key={log.id} className="rounded-lg border bg-card p-4 shadow-soft">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="truncate font-semibold">{routine?.name ?? "Workout"}</p>
@@ -194,7 +194,7 @@ export default async function TraineeProgressPage() {
             );
           })}
           {!logs?.length ? (
-            <div className="rounded-lg border border-dashed bg-white p-6 text-center text-sm text-muted-foreground shadow-soft">
+            <div className="rounded-lg border border-dashed bg-card p-6 text-center text-sm text-muted-foreground shadow-soft">
               No completed workouts logged yet.
             </div>
           ) : null}
