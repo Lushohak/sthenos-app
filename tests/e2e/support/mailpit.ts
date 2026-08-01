@@ -12,6 +12,7 @@ type MailpitList = {
 };
 
 type MailpitMessage = {
+  Subject?: string;
   HTML?: string;
   Text?: string;
 };

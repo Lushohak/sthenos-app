@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Your invitation to join Sthenos</title>
+  </head>
+  <body style="margin: 0; background: #f8fafc; color: #0f172a; font-family: Arial, Helvetica, sans-serif;">
+    <div style="display: none; max-height: 0; overflow: hidden; opacity: 0;">
+      Your coach has invited you to activate your Sthenos account.
+    </div>
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background: #f8fafc;">
+      <tr>
+        <td align="center" style="padding: 32px 16px;">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width: 600px; overflow: hidden; border: 1px solid #e2e8f0; border-radius: 12px; background: #ffffff;">
+            <tr>
+              <td style="padding: 24px 32px; border-bottom: 1px solid #e2e8f0;">
+                <p style="margin: 0; color: #1b8375; font-size: 20px; font-weight: 700; letter-spacing: 0.01em;">
+                  Sthenos
+                </p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding: 32px;">
+                <h1 style="margin: 0 0 20px; color: #0f172a; font-size: 26px; line-height: 1.3;">
+                  Welcome to Sthenos
+                </h1>
+                <p style="margin: 0 0 16px; color: #334155; font-size: 16px; line-height: 1.6;">
+                  {{ if .Data.full_name }}Hello {{ .Data.full_name }},{{ else }}Hello,{{ end }}
+                </p>
+                <p style="margin: 0 0 16px; color: #334155; font-size: 16px; line-height: 1.6;">
+                  Your coach has invited you to join Sthenos, a personal training workspace where you can review assigned routines, follow guided workouts, and access your training history and progress information.
+                </p>
+                <p style="margin: 0 0 24px; color: #334155; font-size: 16px; line-height: 1.6;">
+                  Please use the secure link below to activate your account and create your password.
+                </p>
+                <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin: 0 0 24px;">
+                  <tr>
+                    <td style="border-radius: 8px; background: #1b8375;">
+                      <a href="{{ .ConfirmationURL }}" style="display: inline-block; padding: 13px 22px; color: #ffffff; font-size: 16px; font-weight: 700; text-decoration: none;">
+                        Complete account setup
+                      </a>
+                    </td>
+                  </tr>
+                </table>
+                <p style="margin: 0 0 16px; color: #475569; font-size: 14px; line-height: 1.6;">
+                  This invitation is personal and may expire. Please do not forward this email. If the link is no longer valid, contact your coach and request a new account setup email.
+                </p>
+                <p style="margin: 0 0 24px; color: #475569; font-size: 14px; line-height: 1.6;">
+                  If you were not expecting this invitation, you may safely disregard this message.
+                </p>
+                <p style="margin: 0; color: #334155; font-size: 15px; line-height: 1.6;">
+                  Regards,<br />
+                  The Sthenos Team
+                </p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding: 20px 32px; border-top: 1px solid #e2e8f0; background: #f8fafc;">
+                <p style="margin: 0; color: #64748b; font-size: 12px; line-height: 1.5;">
+                  This is an account-related message sent to {{ .Email }}.
+                </p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>

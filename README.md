@@ -141,6 +141,11 @@ Production trainee invitations require the following Supabase Auth settings:
 - Set `NEXT_PUBLIC_SITE_URL` to the same origin, without a trailing slash.
 - Configure custom SMTP before inviting real trainees. Supabase's default email
   service is restricted and rate-limited.
+- Copy the subjects from `supabase/config.toml` and the HTML from
+  `supabase/templates/invite.html` and `supabase/templates/recovery.html` into
+  the corresponding **Invite user** and **Reset password** templates under
+  **Authentication > Email Templates**. The repository configuration applies
+  automatically only to local Supabase.
 - Review the **Invite user** and **Reset password** email templates. The first
   trainee email uses the invite template; resending setup for an existing Auth
   user uses the recovery template.

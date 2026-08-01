@@ -47,7 +47,23 @@ test("@smoke coach invite lets a trainee finish account setup", async ({
   users.track(invitedClient!.client_user_id!, "trainee");
 
   const email = await waitForEmail(traineeEmail);
-  const actionLink = getSupabaseActionLink(email);
+  expect(email.Subject).toBe("Your invitation to join Sthenos");
+  expect(email.HTML).toContain("Welcome to Sthenos");
+  expect(email.HTML).toContain("Complete account setup");
+  expect(getSupabaseActionLink(email)).toContain("type=invite");
+
+  await clearMailpit();
+  await page.getByRole("button", { name: "Send setup email again" }).click();
+  await expect(page).toHaveURL(/invite=resent/);
+  await expect(
+    page.getByText("A new password setup email was sent.")
+  ).toBeVisible();
+
+  const recoveryEmail = await waitForEmail(traineeEmail);
+  expect(recoveryEmail.Subject).toBe("Set up or reset your Sthenos password");
+  expect(recoveryEmail.HTML).toContain("Set your Sthenos password");
+  expect(recoveryEmail.HTML).toContain("Set up my password");
+  const actionLink = getSupabaseActionLink(recoveryEmail);
   const traineeContext = await browser.newContext();
   const traineePage = await traineeContext.newPage();
 
