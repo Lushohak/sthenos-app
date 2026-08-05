@@ -117,6 +117,7 @@ export type Database = {
           description: string | null;
           routine_type: "circuit" | "individual";
           default_cycles: number;
+          archived_at: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -126,6 +127,7 @@ export type Database = {
           description?: string | null;
           routine_type?: "circuit" | "individual";
           default_cycles?: number;
+          archived_at?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["workout_routines"]["Insert"]>;
         Relationships: [

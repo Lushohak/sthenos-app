@@ -14,6 +14,7 @@ export type TestUser = {
 type UserFactory = {
   create(role: AccountRole, name?: string): Promise<TestUser>;
   track(userId: string, role: AccountRole): void;
+  untrack(userId: string): void;
 };
 
 type TestFixtures = {
@@ -67,6 +68,10 @@ export const test = base.extend<TestFixtures>({
         if (!createdUsers.some((user) => user.id === userId)) {
           createdUsers.push({ id: userId, role });
         }
+      },
+      untrack(userId) {
+        const index = createdUsers.findIndex((user) => user.id === userId);
+        if (index >= 0) createdUsers.splice(index, 1);
       },
       async create(role, requestedName) {
         const marker = uniqueValue(role);

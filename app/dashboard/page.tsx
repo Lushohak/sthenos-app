@@ -12,7 +12,11 @@ export default async function DashboardPage() {
 
   const [{ count: totalClients }, { data: weeklyLogs }, { data: recentProgress }] =
     await Promise.all([
-      supabase.from("clients").select("id", { count: "exact", head: true }).eq("coach_id", user.id),
+      supabase
+        .from("clients")
+        .select("id", { count: "exact", head: true })
+        .eq("coach_id", user.id)
+        .neq("status", "archived"),
       supabase
         .from("workout_logs")
         .select("client_id")
@@ -36,7 +40,7 @@ export default async function DashboardPage() {
         action={<LinkButton href="/dashboard/clients/new">New client</LinkButton>}
       />
       <section className="grid gap-4 md:grid-cols-3">
-        <StatCard label="Total clients" value={totalClients ?? 0} />
+        <StatCard label="Active clients" value={totalClients ?? 0} />
         <StatCard label="Clients trained this week" value={trainedThisWeek} />
         <StatCard label="Recent progress updates" value={recentProgress?.length ?? 0} />
       </section>

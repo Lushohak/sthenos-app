@@ -8,6 +8,8 @@ import {
 } from "@/components/forms/client-activity-forms";
 import { AssignRoutineForm } from "@/components/forms/assign-routine-form";
 import { TraineeInviteForm } from "@/components/forms/trainee-invite-form";
+import { DeleteClientAccount } from "@/components/clients/delete-client-account";
+import { ArchiveClient } from "@/components/clients/archive-client";
 import { Table, Td, Th } from "@/components/ui/table";
 import { getUserOrRedirect } from "@/lib/auth";
 import { formatDate } from "@/lib/utils";
@@ -35,7 +37,12 @@ export default async function ClientProfilePage({ params, searchParams }: PagePr
       .eq("coach_id", user.id)
       .eq("id", clientId)
       .single(),
-    supabase.from("workout_routines").select("*").eq("coach_id", user.id).order("name"),
+    supabase
+      .from("workout_routines")
+      .select("*")
+      .eq("coach_id", user.id)
+      .is("archived_at", null)
+      .order("name"),
     supabase
       .from("client_routines")
       .select("*, workout_routines(id, name)")
@@ -160,29 +167,41 @@ export default async function ClientProfilePage({ params, searchParams }: PagePr
         </div>
         <div className="lg:col-span-2">
           <div className="grid gap-4">
-            <TraineeInviteForm
-              clientId={client.id}
-              clientUserId={client.client_user_id}
-              email={client.email}
-              invitedAt={client.invited_at}
-              acceptedAt={client.invitation_accepted_at}
-            />
-            <div>
-              <h2 className="mb-3 font-semibold">Assign routine</h2>
-              <AssignRoutineForm
+            {client.status !== "archived" ? (
+              <>
+              <TraineeInviteForm
                 clientId={client.id}
-                clientName={client.name}
-                routines={routines ?? []}
+                clientUserId={client.client_user_id}
+                email={client.email}
+                invitedAt={client.invited_at}
+                acceptedAt={client.invitation_accepted_at}
               />
-            </div>
+              <div>
+                <h2 className="mb-3 font-semibold">Assign routine</h2>
+                <AssignRoutineForm
+                  clientId={client.id}
+                  clientName={client.name}
+                  routines={routines ?? []}
+                />
+              </div>
+              </>
+            ) : (
+              <div className="rounded-md border border-info/30 bg-info/5 p-4 text-sm text-muted-foreground shadow-soft">
+                Restore this client to send account invitations, create progress
+                entries, or assign additional routines. Existing records remain
+                available below.
+              </div>
+            )}
           </div>
         </div>
       </section>
       <section className="mt-8 grid gap-6 xl:grid-cols-2">
         <div>
           <h2 className="mb-3 font-semibold">Training log</h2>
-          <WorkoutLogForm clientId={client.id} assignments={(assignments ?? []) as never} />
-          <div className="mt-4">
+          {client.status !== "archived" ? (
+            <WorkoutLogForm clientId={client.id} assignments={(assignments ?? []) as never} />
+          ) : null}
+          <div className={client.status !== "archived" ? "mt-4" : undefined}>
             <Table>
               <thead>
                 <tr>
@@ -210,8 +229,8 @@ export default async function ClientProfilePage({ params, searchParams }: PagePr
         </div>
         <div>
           <h2 className="mb-3 font-semibold">Body progress</h2>
-          <BodyProgressForm clientId={client.id} />
-          <div className="mt-4">
+          {client.status !== "archived" ? <BodyProgressForm clientId={client.id} /> : null}
+          <div className={client.status !== "archived" ? "mt-4" : undefined}>
             <Table>
               <thead>
                 <tr>
@@ -243,6 +262,17 @@ export default async function ClientProfilePage({ params, searchParams }: PagePr
       <p className="mt-6 text-sm text-muted-foreground">
         <Link href="/dashboard/routines" className="font-medium text-info hover:text-info/80">Manage routine templates</Link>
       </p>
+      <ArchiveClient
+        clientId={client.id}
+        clientName={client.name}
+        isArchived={client.status === "archived"}
+        assignmentCount={assignments?.length ?? 0}
+      />
+      <DeleteClientAccount
+        clientId={client.id}
+        clientName={client.name}
+        hasLoginAccount={Boolean(client.client_user_id)}
+      />
     </>
   );
 }

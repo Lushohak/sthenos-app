@@ -26,6 +26,10 @@ export type BulkAssignRoutineState = {
   skippedCount: number;
 };
 
+export type ArchiveRoutineResult =
+  | { success: true }
+  | { success: false; message: string };
+
 export async function createRoutineAction(formData: FormData) {
   const { supabase, user } = await getUserOrRedirect();
 
@@ -48,8 +52,20 @@ export async function createRoutineAction(formData: FormData) {
 }
 
 export async function addRoutineExerciseAction(routineId: string, formData: FormData) {
-  const { supabase } = await getUserOrRedirect();
+  const { supabase, user } = await getUserOrRedirect();
   const exerciseId = String(formData.get("exercise_id") ?? "");
+
+  const { data: routine } = await supabase
+    .from("workout_routines")
+    .select("id")
+    .eq("id", routineId)
+    .eq("coach_id", user.id)
+    .is("archived_at", null)
+    .maybeSingle();
+
+  if (!routine) {
+    throw new Error("Archived routines cannot be edited.");
+  }
 
   const { error } = await supabase.from("routine_exercises").insert({
     routine_id: routineId,
@@ -103,6 +119,7 @@ export async function bulkAssignRoutineAction(
     .select("id")
     .eq("id", routineId)
     .eq("coach_id", user.id)
+    .is("archived_at", null)
     .single();
 
   if (routineError || !routine) {
@@ -206,7 +223,16 @@ export async function bulkAssignRoutineAction(
 }
 
 export async function removeRoutineExerciseAction(routineId: string, routineExerciseId: string) {
-  const { supabase } = await getUserOrRedirect();
+  const { supabase, user } = await getUserOrRedirect();
+  const { data: routine } = await supabase
+    .from("workout_routines")
+    .select("id")
+    .eq("id", routineId)
+    .eq("coach_id", user.id)
+    .is("archived_at", null)
+    .maybeSingle();
+
+  if (!routine) throw new Error("Archived routines cannot be edited.");
 
   const { error } = await supabase
     .from("routine_exercises")
@@ -220,12 +246,22 @@ export async function removeRoutineExerciseAction(routineId: string, routineExer
 }
 
 export async function reorderRoutineExercisesAction(routineId: string, orderedIds: string[]) {
-  const { supabase } = await getUserOrRedirect();
+  const { supabase, user } = await getUserOrRedirect();
   const uniqueIds = Array.from(new Set(orderedIds.filter(Boolean)));
 
   if (uniqueIds.length !== orderedIds.length) {
     throw new Error("Routine exercise order contains duplicate or invalid items.");
   }
+
+  const { data: routine } = await supabase
+    .from("workout_routines")
+    .select("id")
+    .eq("id", routineId)
+    .eq("coach_id", user.id)
+    .is("archived_at", null)
+    .maybeSingle();
+
+  if (!routine) throw new Error("Archived routines cannot be edited.");
 
   const results = await Promise.all(
     uniqueIds.map((id, index) =>
@@ -241,4 +277,73 @@ export async function reorderRoutineExercisesAction(routineId: string, orderedId
   if (failedUpdate?.error) throw new Error(failedUpdate.error.message);
 
   revalidatePath(`/dashboard/routines/${routineId}`);
+}
+
+export async function archiveRoutineAction(
+  routineId: string
+): Promise<ArchiveRoutineResult> {
+  const { supabase, user } = await getUserOrRedirect();
+  const { data, error } = await supabase
+    .from("workout_routines")
+    .update({ archived_at: new Date().toISOString() })
+    .eq("id", routineId)
+    .eq("coach_id", user.id)
+    .is("archived_at", null)
+    .select("id")
+    .maybeSingle();
+
+  if (error) {
+    return {
+      success: false,
+      message: "We could not archive this routine. Please try again."
+    };
+  }
+
+  if (!data) {
+    return {
+      success: false,
+      message: "This routine is unavailable or has already been archived."
+    };
+  }
+
+  revalidatePath("/dashboard/routines");
+  revalidatePath(`/dashboard/routines/${routineId}`);
+  revalidatePath("/dashboard/clients");
+  revalidatePath("/trainee");
+
+  return { success: true };
+}
+
+export async function restoreRoutineAction(
+  routineId: string
+): Promise<ArchiveRoutineResult> {
+  const { supabase, user } = await getUserOrRedirect();
+  const { data, error } = await supabase
+    .from("workout_routines")
+    .update({ archived_at: null })
+    .eq("id", routineId)
+    .eq("coach_id", user.id)
+    .not("archived_at", "is", null)
+    .select("id")
+    .maybeSingle();
+
+  if (error) {
+    return {
+      success: false,
+      message: "We could not restore this routine. Please try again."
+    };
+  }
+
+  if (!data) {
+    return {
+      success: false,
+      message: "This archived routine is no longer available."
+    };
+  }
+
+  revalidatePath("/dashboard/routines");
+  revalidatePath(`/dashboard/routines/${routineId}`);
+  revalidatePath("/dashboard/clients");
+
+  return { success: true };
 }

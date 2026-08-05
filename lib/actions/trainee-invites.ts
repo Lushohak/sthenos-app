@@ -110,7 +110,7 @@ export async function inviteTraineeAction(clientId: string) {
   const { data: client, error: clientError } = await supabase
     .from("clients")
     .select(
-      "id, name, email, client_user_id, invited_at, invitation_accepted_at"
+      "id, name, email, status, client_user_id, invited_at, invitation_accepted_at"
     )
     .eq("coach_id", user.id)
     .eq("id", clientId)
@@ -118,6 +118,10 @@ export async function inviteTraineeAction(clientId: string) {
 
   if (clientError || !client) {
     throw new Error("Client not found.");
+  }
+
+  if (client.status === "archived") {
+    throw new Error("Restore this client before sending an account invitation.");
   }
 
   if (!client.email) {
