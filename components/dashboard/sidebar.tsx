@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { Activity, BarChart3, Dumbbell, LayoutDashboard, Library, Users } from "lucide-react";
+import { BarChart3, Dumbbell, LayoutDashboard, Library, Users } from "lucide-react";
 import { usePathname } from "next/navigation";
+import { SthenosMark } from "@/components/brand/sthenos-logo";
 import { logoutAction } from "@/lib/actions/auth";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { cn } from "@/lib/utils";
@@ -20,8 +21,8 @@ export function Sidebar() {
 
   return (
     <aside className="flex min-h-dvh w-full flex-col border-r bg-card px-4 py-5 md:w-64">
-      <Link href="/dashboard" className="mb-8 flex items-center gap-2 text-lg font-semibold">
-        <Activity className="h-5 w-5 text-primary" aria-hidden="true" />
+      <Link href="/dashboard" className="mb-8 flex items-center gap-2.5 text-lg font-semibold">
+        <SthenosMark priority />
         Sthenos
       </Link>
       <nav className="grid gap-1">

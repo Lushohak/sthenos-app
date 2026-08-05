@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { Activity, LogOut } from "lucide-react";
+import { LogOut } from "lucide-react";
+import { SthenosMark } from "@/components/brand/sthenos-logo";
 import { logoutAction } from "@/lib/actions/auth";
 import { TraineeNav } from "@/components/trainee/trainee-nav";
 import { SubmitButton } from "@/components/ui/submit-button";
@@ -13,8 +14,8 @@ export default function TraineeLayout({
     <div className="min-h-dvh">
       <header className="border-b bg-card">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
-          <Link href="/trainee" className="flex items-center gap-2 text-lg font-semibold">
-            <Activity className="h-5 w-5 text-primary" aria-hidden="true" />
+          <Link href="/trainee" className="flex items-center gap-2.5 text-lg font-semibold">
+            <SthenosMark priority />
             Sthenos
           </Link>
           <div className="hidden sm:block">
