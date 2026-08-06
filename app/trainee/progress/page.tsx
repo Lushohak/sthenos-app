@@ -27,7 +27,7 @@ export default async function TraineeProgressPage() {
       .gte("trained_on", thirtyDaysAgo.toISOString().slice(0, 10)),
     supabase
       .from("workout_logs")
-      .select("id, trained_on, notes, workout_routines(name)")
+      .select("id, trained_on, notes, duration_minutes, workout_routines(name)")
       .eq("client_id", client.id)
       .order("trained_on", { ascending: false })
       .limit(20),
@@ -190,6 +190,11 @@ export default async function TraineeProgressPage() {
                 {log.notes ? (
                   <p className="mt-3 border-t pt-3 text-sm text-muted-foreground">{log.notes}</p>
                 ) : null}
+                {log.duration_minutes ? (
+                  <p className="mt-2 text-xs font-medium text-muted-foreground">
+                    Duration: {log.duration_minutes} min
+                  </p>
+                ) : null}
               </article>
             );
           })}
@@ -205,6 +210,7 @@ export default async function TraineeProgressPage() {
               <tr>
                 <Th>Date</Th>
                 <Th>Routine</Th>
+                <Th>Duration</Th>
                 <Th>Notes</Th>
               </tr>
             </thead>
@@ -218,13 +224,14 @@ export default async function TraineeProgressPage() {
                   <tr key={log.id}>
                     <Td>{formatDate(log.trained_on)}</Td>
                     <Td>{routine?.name ?? "Workout"}</Td>
+                    <Td>{log.duration_minutes ? `${log.duration_minutes} min` : "Not set"}</Td>
                     <Td>{log.notes ?? "No notes"}</Td>
                   </tr>
                 );
               })}
               {!logs?.length ? (
                 <tr>
-                  <Td colSpan={3}>No completed workouts logged yet.</Td>
+                  <Td colSpan={4}>No completed workouts logged yet.</Td>
                 </tr>
               ) : null}
             </tbody>

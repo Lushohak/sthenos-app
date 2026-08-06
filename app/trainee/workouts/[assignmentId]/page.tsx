@@ -15,7 +15,7 @@ export default async function TraineeWorkoutPage({ params }: PageProps) {
   const { data: assignment, error } = await supabase
     .from("client_routines")
     .select(
-      "id, status, notes, workout_routines(id, name, description, routine_type, default_cycles, routine_exercises(id, position, reps, rest_seconds, notes, exercises(id, name, category, equipment, thumbnail_url, video_url)))"
+      "id, status, notes, workout_routines(id, name, description, routine_type, default_cycles, routine_exercises(id, position, sets, reps, rest_seconds, notes, exercises(id, name, category, equipment, thumbnail_url, video_url)))"
     )
     .eq("id", assignmentId)
     .eq("client_id", client.id)
@@ -30,6 +30,10 @@ export default async function TraineeWorkoutPage({ params }: PageProps) {
     : assignment.workout_routines;
 
   if (!routine) {
+    notFound();
+  }
+
+  if (routine.routine_type === "activity") {
     notFound();
   }
 
@@ -49,6 +53,7 @@ export default async function TraineeWorkoutPage({ params }: PageProps) {
         equipment: exercise.equipment,
         thumbnailUrl: exercise.thumbnail_url,
         videoUrl: exercise.video_url,
+        sets: item.sets,
         reps: item.reps,
         restSeconds: item.rest_seconds,
         notes: item.notes

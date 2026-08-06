@@ -13,6 +13,7 @@ type Exercise = Database["public"]["Tables"]["exercises"]["Row"];
 
 type RoutineExerciseFormProps = {
   routineId: string;
+  routineType: "circuit" | "individual" | "gym";
   nextPosition: number;
   exercises: Exercise[];
   initialExerciseId?: string;
@@ -20,6 +21,7 @@ type RoutineExerciseFormProps = {
 
 export function RoutineExerciseForm({
   routineId,
+  routineType,
   nextPosition,
   exercises,
   initialExerciseId
@@ -59,6 +61,9 @@ export function RoutineExerciseForm({
   return (
     <form action={addRoutineExerciseAction.bind(null, routineId)} className="grid gap-4 rounded-md border bg-card p-4 shadow-soft">
       <input name="position" type="hidden" value={nextPosition} />
+      {routineType !== "gym" ? (
+        <input name="sets" type="hidden" value="1" />
+      ) : null}
       <div className="grid gap-2">
         <label htmlFor="exercise-search" className="text-sm font-medium">
           Search exercises
@@ -120,7 +125,21 @@ export function RoutineExerciseForm({
           ) : null}
         </div>
       </fieldset>
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div
+        className={`grid gap-4 ${routineType === "gym" ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}
+      >
+        {routineType === "gym" ? (
+          <Field label="Sets">
+            <Input
+              name="sets"
+              type="number"
+              min={1}
+              max={20}
+              defaultValue={3}
+              required
+            />
+          </Field>
+        ) : null}
         <Field label="Reps">
           <Input name="reps" defaultValue="10" required />
         </Field>

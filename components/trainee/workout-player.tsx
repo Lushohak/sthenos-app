@@ -40,6 +40,7 @@ export type WorkoutPlayerExercise = {
   equipment: string | null;
   thumbnailUrl: string | null;
   videoUrl: string | null;
+  sets: number;
   reps: string;
   restSeconds: number | null;
   notes: string | null;
@@ -51,7 +52,7 @@ type WorkoutPlayerProps = {
   routineName: string;
   routineDescription: string | null;
   assignmentNotes: string | null;
-  routineType: "circuit" | "individual";
+  routineType: "circuit" | "individual" | "gym";
   defaultCycles: number;
   exercises: WorkoutPlayerExercise[];
   today: string;
@@ -100,11 +101,37 @@ export function WorkoutPlayer({
   today
 }: WorkoutPlayerProps) {
   const cycleCount = routineType === "circuit" ? Math.max(defaultCycles, 1) : 1;
-  const totalSteps = exercises.length * cycleCount;
+  const workoutSteps = useMemo(() => {
+    if (routineType === "gym") {
+      return exercises.flatMap((exercise, exerciseIndex) =>
+        Array.from({ length: Math.max(exercise.sets, 1) }, (_, setIndex) => ({
+          exercise,
+          exerciseIndex,
+          round: 1,
+          setNumber: setIndex + 1,
+          totalSets: Math.max(exercise.sets, 1)
+        }))
+      );
+    }
+
+    return Array.from({ length: cycleCount }, (_, roundIndex) =>
+      exercises.map((exercise, exerciseIndex) => ({
+        exercise,
+        exerciseIndex,
+        round: roundIndex + 1,
+        setNumber: 1,
+        totalSets: 1
+      }))
+    ).flat();
+  }, [cycleCount, exercises, routineType]);
+  const totalSteps = workoutSteps.length;
   const storageKey = `sthenos:workout:${assignmentId}`;
   const signature = useMemo(
-    () => `${routineId}:${cycleCount}:${exercises.map((exercise) => exercise.id).join(",")}`,
-    [cycleCount, exercises, routineId]
+    () =>
+      `${routineId}:${routineType}:${workoutSteps
+        .map((step) => `${step.exercise.id}:${step.setNumber}:${step.round}`)
+        .join(",")}`,
+    [routineId, routineType, workoutSteps]
   );
   const touchStart = useRef<{ x: number; y: number } | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -126,13 +153,13 @@ export function WorkoutPlayer({
     initialActionState
   );
 
-  const exerciseIndex = exercises.length ? stepIndex % exercises.length : 0;
-  const round = exercises.length ? Math.floor(stepIndex / exercises.length) + 1 : 1;
-  const currentExercise = exercises[exerciseIndex];
+  const currentStep = workoutSteps[stepIndex];
+  const exerciseIndex = currentStep?.exerciseIndex ?? 0;
+  const round = currentStep?.round ?? 1;
+  const currentExercise = currentStep?.exercise;
   const nextStepIndex = Math.min(stepIndex + 1, Math.max(totalSteps - 1, 0));
-  const nextExercise = exercises.length
-    ? exercises[nextStepIndex % exercises.length]
-    : undefined;
+  const nextStep = workoutSteps[nextStepIndex];
+  const nextExercise = nextStep?.exercise;
   const completedSteps =
     phase === "summary"
       ? totalSteps
@@ -512,6 +539,8 @@ export function WorkoutPlayer({
                 ? "Ready to finish"
                 : routineType === "circuit"
                   ? `Round ${round} of ${cycleCount}`
+                  : routineType === "gym" && currentStep
+                    ? `Set ${currentStep.setNumber} of ${currentStep.totalSets}`
                   : `Exercise ${stepIndex + 1} of ${totalSteps}`}
             </p>
             <h1 className="truncate text-xl font-semibold sm:text-2xl">{routineName}</h1>
@@ -568,7 +597,7 @@ export function WorkoutPlayer({
         {phase === "exercise" && currentExercise ? (
           <>
             <div
-              key={`${round}-${currentExercise.id}`}
+              key={`${stepIndex}-${currentExercise.id}`}
               className="touch-pan-y overflow-hidden rounded-xl border bg-card shadow-soft"
               onTouchStart={(event) => {
                 const touch = event.changedTouches[0];
@@ -600,6 +629,8 @@ export function WorkoutPlayer({
                 </span>
                 {routineType === "circuit" ? (
                   <span>Round {round} of {cycleCount}</span>
+                ) : routineType === "gym" && currentStep ? (
+                  <span>Set {currentStep.setNumber} of {currentStep.totalSets}</span>
                 ) : null}
               </div>
               {currentExercise.thumbnailUrl ? (
@@ -705,14 +736,19 @@ export function WorkoutPlayer({
           <div className="rounded-xl border bg-card p-6 text-center shadow-soft sm:p-10">
             <Clock3 className="mx-auto h-9 w-9 text-warning" aria-hidden="true" />
             <p className="mt-4 text-sm font-medium uppercase tracking-wide text-muted-foreground">
-              Rest before the next exercise
+              {routineType === "gym" ? "Rest before the next set" : "Rest before the next exercise"}
             </p>
             <p className="mt-3 text-6xl font-semibold tabular-nums">
               {formatTimer(restSecondsRemaining)}
             </p>
             {nextExercise ? (
               <p className="mt-4 text-sm text-muted-foreground">
-                Up next: <span className="font-medium text-foreground">{nextExercise.name}</span>
+                Up next:{" "}
+                <span className="font-medium text-foreground">
+                  {routineType === "gym" && nextStep
+                    ? `${nextExercise.name} · Set ${nextStep.setNumber} of ${nextStep.totalSets}`
+                    : nextExercise.name}
+                </span>
               </p>
             ) : null}
             <div className="mt-7 flex flex-col-reverse gap-2 sm:flex-row sm:justify-center">
@@ -741,12 +777,18 @@ export function WorkoutPlayer({
             </div>
             <dl className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
               <div className="rounded-lg bg-muted/60 p-4 text-center">
-                <dt className="text-xs font-medium text-muted-foreground">Exercises</dt>
+                <dt className="text-xs font-medium text-muted-foreground">
+                  {routineType === "gym" ? "Total sets" : "Exercises"}
+                </dt>
                 <dd className="mt-1 text-lg font-semibold">{totalSteps}</dd>
               </div>
               <div className="rounded-lg bg-muted/60 p-4 text-center">
-                <dt className="text-xs font-medium text-muted-foreground">Rounds</dt>
-                <dd className="mt-1 text-lg font-semibold">{cycleCount}</dd>
+                <dt className="text-xs font-medium text-muted-foreground">
+                  {routineType === "gym" ? "Exercises" : "Rounds"}
+                </dt>
+                <dd className="mt-1 text-lg font-semibold">
+                  {routineType === "gym" ? exercises.length : cycleCount}
+                </dd>
               </div>
               <div className="col-span-2 rounded-lg bg-muted/60 p-4 text-center sm:col-span-1">
                 <dt className="text-xs font-medium text-muted-foreground">Time</dt>
@@ -759,6 +801,11 @@ export function WorkoutPlayer({
               </div>
             ) : null}
             <form action={formAction} className="mt-6 grid gap-4">
+              <input
+                type="hidden"
+                name="duration_minutes"
+                value={elapsedMinutes}
+              />
               <Field label="Training date">
                 <Input
                   name="trained_on"

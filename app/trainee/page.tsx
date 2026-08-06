@@ -1,4 +1,5 @@
 import {
+  Activity,
   CalendarDays,
   Clock3,
   Dumbbell,
@@ -10,6 +11,8 @@ import { PageHeader } from "@/components/dashboard/page-header";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { ExerciseThumb } from "@/components/exercises/exercise-thumb";
 import { WorkoutRoutineActions } from "@/components/trainee/workout-routine-actions";
+import { ActivityRoutineActions } from "@/components/trainee/activity-routine-actions";
+import { RoutineThumbnail } from "@/components/routines/routine-thumbnail";
 import { Table, Td, Th } from "@/components/ui/table";
 import { getTraineeOrRedirect } from "@/lib/trainee";
 import { formatDate } from "@/lib/utils";
@@ -25,13 +28,14 @@ export default async function TraineeDashboardPage() {
     supabase
       .from("client_routines")
       .select(
-        "id, status, assigned_at, notes, workout_routines(id, name, description, routine_type, default_cycles, routine_exercises(position, reps, rest_seconds, notes, exercises(name, category, difficulty, thumbnail_url, video_url, equipment)))"
+        "id, status, assigned_at, notes, workout_routines(id, name, description, routine_type, default_cycles, thumbnail_url, routine_exercises(position, sets, reps, rest_seconds, notes, exercises(name, category, difficulty, thumbnail_url, video_url, equipment)))"
       )
       .eq("client_id", client.id)
+      .eq("status", "active")
       .order("assigned_at", { ascending: false }),
     supabase
       .from("workout_logs")
-      .select("id, trained_on, notes, workout_routines(name)", { count: "exact" })
+      .select("id, trained_on, notes, duration_minutes, workout_routines(name)", { count: "exact" })
       .eq("client_id", client.id)
       .order("trained_on", { ascending: false })
       .limit(8),
@@ -51,6 +55,7 @@ export default async function TraineeDashboardPage() {
     return 0;
   });
   const activeRoutineCount = orderedAssignments.filter((item) => item.status === "active").length;
+  const today = new Date().toISOString().slice(0, 10);
 
   return (
     <>
@@ -81,7 +86,7 @@ export default async function TraineeDashboardPage() {
         <div className="mb-4">
           <h2 className="text-xl font-semibold">Your routines</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Preview the plan or begin a guided workout when you are ready to train.
+            Begin a guided workout or log a completed activity when you are ready.
           </p>
         </div>
         <div className="grid gap-5">
@@ -93,6 +98,7 @@ export default async function TraineeDashboardPage() {
               (a, b) => a.position - b.position
             );
             const isActive = assignment.status === "active";
+            const isActivity = routine?.routine_type === "activity";
 
             return (
               <article
@@ -100,6 +106,13 @@ export default async function TraineeDashboardPage() {
                 className="overflow-hidden rounded-xl border bg-card shadow-soft"
               >
                 <div className="p-4 sm:p-5">
+                  {isActivity ? (
+                    <RoutineThumbnail
+                      src={routine.thumbnail_url}
+                      alt={`${routine.name} activity reference`}
+                      className="mb-4 max-h-72 w-full"
+                    />
+                  ) : null}
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
@@ -115,14 +128,24 @@ export default async function TraineeDashboardPage() {
                         </span>
                       </div>
                       <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
-                        {routine?.description ?? "Follow the exercises below in order."}
+                        {routine?.description ??
+                          (isActivity
+                            ? "Log this activity whenever you complete it."
+                            : "Follow the exercises below in order.")}
                       </p>
                     </div>
                     <div className="flex shrink-0 flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                      <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1.5">
-                        <ListChecks className="h-3.5 w-3.5" aria-hidden="true" />
-                        {routineExercises.length} {routineExercises.length === 1 ? "exercise" : "exercises"}
-                      </span>
+                      {isActivity ? (
+                        <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1.5">
+                          <Activity className="h-3.5 w-3.5" aria-hidden="true" />
+                          Activity
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1.5">
+                          <ListChecks className="h-3.5 w-3.5" aria-hidden="true" />
+                          {routineExercises.length} {routineExercises.length === 1 ? "exercise" : "exercises"}
+                        </span>
+                      )}
                       {routine?.routine_type === "circuit" ? (
                         <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1.5">
                           <Dumbbell className="h-3.5 w-3.5" aria-hidden="true" />
@@ -138,11 +161,18 @@ export default async function TraineeDashboardPage() {
                   ) : null}
                 </div>
 
-                <WorkoutRoutineActions
-                  assignmentId={assignment.id}
-                  canBegin={isActive && Boolean(routine) && routineExercises.length > 0}
-                >
-                  <div className="p-4 sm:p-5">
+                {isActivity && routine ? (
+                  <ActivityRoutineActions
+                    assignmentId={assignment.id}
+                    routineName={routine.name}
+                    today={today}
+                  />
+                ) : (
+                  <WorkoutRoutineActions
+                    assignmentId={assignment.id}
+                    canBegin={isActive && Boolean(routine) && routineExercises.length > 0}
+                  >
+                    <div className="p-4 sm:p-5">
                     <h4 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
                       Workout plan
                     </h4>
@@ -182,6 +212,12 @@ export default async function TraineeDashboardPage() {
                               ) : null}
                             </div>
                             <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
+                              {routine?.routine_type === "gym" ? (
+                                <div className="rounded-md bg-muted/60 px-3 py-2 text-center">
+                                  <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-muted-foreground">Sets</p>
+                                  <p className="mt-0.5 text-sm font-semibold">{item.sets}</p>
+                                </div>
+                              ) : null}
                               <div className="rounded-md bg-muted/60 px-3 py-2 text-center">
                                 <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-muted-foreground">Reps</p>
                                 <p className="mt-0.5 text-sm font-semibold">{item.reps}</p>
@@ -216,8 +252,9 @@ export default async function TraineeDashboardPage() {
                         </li>
                       ) : null}
                     </ol>
-                  </div>
-                </WorkoutRoutineActions>
+                    </div>
+                  </WorkoutRoutineActions>
+                )}
               </article>
             );
           })}
@@ -258,6 +295,11 @@ export default async function TraineeDashboardPage() {
                   {log.notes ? (
                     <p className="mt-3 border-t pt-3 text-sm text-muted-foreground">{log.notes}</p>
                   ) : null}
+                  {log.duration_minutes ? (
+                    <p className="mt-2 text-xs font-medium text-muted-foreground">
+                      Duration: {log.duration_minutes} min
+                    </p>
+                  ) : null}
                 </article>
               );
             })}
@@ -273,6 +315,7 @@ export default async function TraineeDashboardPage() {
                 <tr>
                   <Th>Date</Th>
                   <Th>Routine</Th>
+                  <Th>Duration</Th>
                   <Th>Notes</Th>
                 </tr>
               </thead>
@@ -285,13 +328,14 @@ export default async function TraineeDashboardPage() {
                     <tr key={log.id}>
                       <Td>{formatDate(log.trained_on)}</Td>
                       <Td>{routine?.name ?? "None"}</Td>
+                      <Td>{log.duration_minutes ? `${log.duration_minutes} min` : "Not set"}</Td>
                       <Td>{log.notes ?? "No notes"}</Td>
                     </tr>
                   );
                 })}
                 {!logs?.length ? (
                   <tr>
-                    <Td colSpan={3}>No completed workouts logged yet.</Td>
+                    <Td colSpan={4}>No completed workouts logged yet.</Td>
                   </tr>
                 ) : null}
               </tbody>

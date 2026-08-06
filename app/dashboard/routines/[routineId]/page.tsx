@@ -4,6 +4,7 @@ import { RoutineExerciseForm } from "@/components/forms/routine-exercise-form";
 import { RoutineExerciseList } from "@/components/forms/routine-exercise-list";
 import { LinkButton } from "@/components/ui/button";
 import { ArchiveRoutine } from "@/components/routines/archive-routine";
+import { RoutineThumbnail } from "@/components/routines/routine-thumbnail";
 import { getUserOrRedirect } from "@/lib/auth";
 
 type PageProps = {
@@ -68,7 +69,10 @@ export default async function RoutineDetailPage({ params, searchParams }: PagePr
         description={
           isArchived
             ? "This routine is archived and available in read-only mode."
-            : routine.description ?? "Build the exercise list for this routine."
+            : routine.description ??
+              (routine.routine_type === "activity"
+                ? "A repeatable activity trainees can log when completed."
+                : "Build the exercise list for this routine.")
         }
         action={
           !isArchived ? (
@@ -88,36 +92,78 @@ export default async function RoutineDetailPage({ params, searchParams }: PagePr
         <div className="rounded-md border bg-card p-4 shadow-soft">
           <p className="text-sm font-medium text-muted-foreground">Structure</p>
           <p className="mt-1 text-lg font-semibold">
-            {routine.routine_type === "circuit" ? "Cycles" : "Exercise-specific repeats"}
+            {routine.routine_type === "activity"
+              ? "Activity"
+              : routine.routine_type === "gym"
+                ? "Gym workout"
+              : routine.routine_type === "circuit"
+                ? "Cycles"
+                : "Exercise-specific repeats"}
           </p>
         </div>
         <div className="rounded-md border bg-card p-4 shadow-soft">
-          <p className="text-sm font-medium text-muted-foreground">Default cycles</p>
-          <p className="mt-1 text-lg font-semibold">{routine.default_cycles}</p>
+          <p className="text-sm font-medium text-muted-foreground">
+            {routine.routine_type === "activity"
+              ? "Logging"
+              : routine.routine_type === "gym"
+                ? "Set structure"
+                : "Default cycles"}
+          </p>
+          <p className="mt-1 text-lg font-semibold">
+            {routine.routine_type === "activity"
+              ? "Repeatable"
+              : routine.routine_type === "gym"
+                ? "Per exercise"
+                : routine.default_cycles}
+          </p>
         </div>
         <div className="rounded-md border bg-card p-4 shadow-soft">
           <p className="text-sm font-medium text-muted-foreground">Exercises</p>
-          <p className="mt-1 text-lg font-semibold">{routineExercises?.length ?? 0}</p>
+          <p className="mt-1 text-lg font-semibold">
+            {routine.routine_type === "activity"
+              ? "Not required"
+              : routineExercises?.length ?? 0}
+          </p>
         </div>
       </section>
-      <section className={isArchived ? "grid gap-6" : "grid gap-6 xl:grid-cols-[1fr_24rem]"}>
-        <div>
-          <RoutineExerciseList
-            routineId={routine.id}
-            routineExercises={routineExercises ?? []}
-            readOnly={isArchived}
+      {routine.routine_type === "activity" ? (
+        <section className="grid gap-5 rounded-xl border bg-card p-4 shadow-soft md:grid-cols-[minmax(0,24rem)_1fr] md:p-5">
+          <RoutineThumbnail
+            src={routine.thumbnail_url}
+            alt={`${routine.name} activity reference`}
+            className="w-full"
           />
-        </div>
-        {!isArchived ? <div>
-          <h2 className="mb-3 font-semibold">Add exercise to routine</h2>
-          <RoutineExerciseForm
-            routineId={routine.id}
-            nextPosition={(routineExercises?.length ?? 0) + 1}
-            exercises={libraryExercises ?? []}
-            initialExerciseId={createdExerciseId}
-          />
-        </div> : null}
-      </section>
+          <div className="self-center">
+            <h2 className="text-lg font-semibold">Activity routine</h2>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Assigned trainees can log this activity with a date, optional
+              duration, and notes. Each completed session is added to their
+              workout history while the assignment remains active.
+            </p>
+          </div>
+        </section>
+      ) : (
+        <section className={isArchived ? "grid gap-6" : "grid gap-6 xl:grid-cols-[1fr_24rem]"}>
+          <div>
+            <RoutineExerciseList
+              routineId={routine.id}
+              routineExercises={routineExercises ?? []}
+              readOnly={isArchived}
+              showSets={routine.routine_type === "gym"}
+            />
+          </div>
+          {!isArchived ? <div>
+            <h2 className="mb-3 font-semibold">Add exercise to routine</h2>
+            <RoutineExerciseForm
+              routineId={routine.id}
+              routineType={routine.routine_type}
+              nextPosition={(routineExercises?.length ?? 0) + 1}
+              exercises={libraryExercises ?? []}
+              initialExerciseId={createdExerciseId}
+            />
+          </div> : null}
+        </section>
+      )}
       <ArchiveRoutine
         routineId={routine.id}
         routineName={routine.name}

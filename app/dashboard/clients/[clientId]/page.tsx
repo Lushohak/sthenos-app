@@ -10,6 +10,7 @@ import { AssignRoutineForm } from "@/components/forms/assign-routine-form";
 import { TraineeInviteForm } from "@/components/forms/trainee-invite-form";
 import { DeleteClientAccount } from "@/components/clients/delete-client-account";
 import { ArchiveClient } from "@/components/clients/archive-client";
+import { ManageRoutineAssignments } from "@/components/clients/manage-routine-assignments";
 import { Table, Td, Th } from "@/components/ui/table";
 import { getUserOrRedirect } from "@/lib/auth";
 import { formatDate } from "@/lib/utils";
@@ -45,7 +46,7 @@ export default async function ClientProfilePage({ params, searchParams }: PagePr
       .order("name"),
     supabase
       .from("client_routines")
-      .select("*, workout_routines(id, name)")
+      .select("*, workout_routines(id, name, archived_at)")
       .eq("coach_id", user.id)
       .eq("client_id", clientId)
       .order("assigned_at", { ascending: false }),
@@ -65,6 +66,27 @@ export default async function ClientProfilePage({ params, searchParams }: PagePr
   ]);
 
   if (clientError || !client) notFound();
+
+  const manageableAssignments = (assignments ?? []).flatMap((assignment) => {
+    if (assignment.status !== "active" && assignment.status !== "paused") {
+      return [];
+    }
+
+    const routine = Array.isArray(assignment.workout_routines)
+      ? assignment.workout_routines[0]
+      : assignment.workout_routines;
+
+    if (!routine) return [];
+
+    return [
+      {
+        id: assignment.id,
+        routineName: routine.name,
+        status: assignment.status,
+        routineArchived: Boolean(routine.archived_at)
+      }
+    ];
+  });
 
   return (
     <>
@@ -182,8 +204,20 @@ export default async function ClientProfilePage({ params, searchParams }: PagePr
                   clientId={client.id}
                   clientName={client.name}
                   routines={routines ?? []}
+                  assignedRoutineIds={(assignments ?? [])
+                    .filter(
+                      (assignment) =>
+                        assignment.status === "active" ||
+                        assignment.status === "paused"
+                    )
+                    .map((assignment) => assignment.routine_id)}
                 />
               </div>
+              <ManageRoutineAssignments
+                clientId={client.id}
+                clientName={client.name}
+                assignments={manageableAssignments}
+              />
               </>
             ) : (
               <div className="rounded-md border border-info/30 bg-info/5 p-4 text-sm text-muted-foreground shadow-soft">
@@ -207,6 +241,7 @@ export default async function ClientProfilePage({ params, searchParams }: PagePr
                 <tr>
                   <Th>Date</Th>
                   <Th>Routine</Th>
+                  <Th>Duration</Th>
                   <Th>Notes</Th>
                 </tr>
               </thead>
@@ -215,12 +250,13 @@ export default async function ClientProfilePage({ params, searchParams }: PagePr
                   <tr key={log.id}>
                     <Td>{formatDate(log.trained_on)}</Td>
                     <Td>{Array.isArray(log.workout_routines) ? log.workout_routines[0]?.name : log.workout_routines?.name ?? "None"}</Td>
+                    <Td>{log.duration_minutes ? `${log.duration_minutes} min` : "Not set"}</Td>
                     <Td>{log.notes ?? "No notes"}</Td>
                   </tr>
                 ))}
                 {!logs?.length ? (
                   <tr>
-                    <Td colSpan={3}>No completed workouts yet.</Td>
+                    <Td colSpan={4}>No completed workouts yet.</Td>
                   </tr>
                 ) : null}
               </tbody>

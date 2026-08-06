@@ -38,7 +38,15 @@ function optionalNumber(formData: FormData, key: string) {
 export type AssignRoutineState = {
   status: "idle" | "success" | "error";
   message: string;
-  routineName?: string;
+  assignedCount?: number;
+  skippedCount?: number;
+  routineNames?: string[];
+};
+
+export type UpdateRoutineAssignmentsState = {
+  status: "idle" | "success" | "error";
+  message: string;
+  updatedCount?: number;
 };
 
 export async function createClientAction(formData: FormData) {
@@ -327,6 +335,7 @@ export async function createWorkoutLogAction(clientId: string, formData: FormDat
     client_id: clientId,
     routine_id: routineId,
     trained_on: String(formData.get("trained_on") ?? new Date().toISOString().slice(0, 10)),
+    duration_minutes: optionalNumber(formData, "duration_minutes"),
     notes: optionalString(formData, "notes")
   });
 
@@ -373,12 +382,26 @@ export async function assignRoutineAction(
   formData: FormData
 ): Promise<AssignRoutineState> {
   const { supabase, user } = await getUserOrRedirect();
-  const routineId = String(formData.get("routine_id") ?? "");
+  const routineIds = Array.from(
+    new Set(
+      formData
+        .getAll("routine_ids")
+        .map((value) => String(value).trim())
+        .filter(Boolean)
+    )
+  );
 
-  if (!routineId) {
+  if (!routineIds.length) {
     return {
       status: "error",
-      message: "Select a routine before assigning it."
+      message: "Select at least one routine before assigning."
+    };
+  }
+
+  if (routineIds.length > 50) {
+    return {
+      status: "error",
+      message: "Select no more than 50 routines at a time."
     };
   }
 
@@ -397,41 +420,205 @@ export async function assignRoutineAction(
     };
   }
 
-  const { data: routine, error: routineError } = await supabase
+  const { data: routines, error: routineError } = await supabase
     .from("workout_routines")
-    .select("name")
-    .eq("id", routineId)
+    .select("id, name")
+    .in("id", routineIds)
     .eq("coach_id", user.id)
-    .is("archived_at", null)
-    .single();
+    .is("archived_at", null);
 
-  if (routineError || !routine) {
+  if (routineError || !routines || routines.length !== routineIds.length) {
     return {
       status: "error",
-      message: "That routine is no longer available. Refresh the page and try again."
+      message:
+        "One or more selected routines are no longer available. Refresh the page and try again."
     };
   }
 
-  const { error } = await supabase.from("client_routines").insert({
-    coach_id: user.id,
-    client_id: clientId,
-    routine_id: routineId,
-    notes: optionalString(formData, "notes")
-  });
+  const { data: existingAssignments, error: existingError } = await supabase
+    .from("client_routines")
+    .select("routine_id")
+    .eq("coach_id", user.id)
+    .eq("client_id", clientId)
+    .in("routine_id", routineIds)
+    .in("status", ["active", "paused"]);
+
+  if (existingError) {
+    return {
+      status: "error",
+      message: "We could not verify the trainee's current routines. Please try again."
+    };
+  }
+
+  const existingRoutineIds = new Set(
+    (existingAssignments ?? []).map((assignment) => assignment.routine_id)
+  );
+  const routinesToAssign = routines.filter(
+    (routine) => !existingRoutineIds.has(routine.id)
+  );
+  const skippedCount = routines.length - routinesToAssign.length;
+
+  if (!routinesToAssign.length) {
+    return {
+      status: "error",
+      message:
+        routineIds.length === 1
+          ? "This routine is already assigned to the trainee."
+          : "All selected routines are already assigned to the trainee."
+    };
+  }
+
+  const notes = optionalString(formData, "notes");
+  const { error } = await supabase.from("client_routines").insert(
+    routinesToAssign.map((routine) => ({
+      coach_id: user.id,
+      client_id: clientId,
+      routine_id: routine.id,
+      notes
+    }))
+  );
 
   if (error) {
     return {
       status: "error",
-      message: "We could not assign this routine. Please try again."
+      message:
+        error.code === "23505"
+          ? "One of these routines was assigned in another session. Refresh the page and try again."
+          : "We could not assign these routines. Please try again."
     };
   }
 
   revalidatePath(`/dashboard/clients/${clientId}`);
+  revalidatePath("/dashboard");
   revalidatePath("/trainee");
 
   return {
     status: "success",
-    message: "Routine assigned successfully.",
-    routineName: routine.name
+    message:
+      routinesToAssign.length === 1
+        ? "Routine assigned successfully."
+        : "Routines assigned successfully.",
+    assignedCount: routinesToAssign.length,
+    skippedCount,
+    routineNames: routinesToAssign.map((routine) => routine.name)
+  };
+}
+
+export async function updateRoutineAssignmentsStatusAction(
+  clientId: string,
+  nextStatus: "active" | "paused",
+  _previousState: UpdateRoutineAssignmentsState,
+  formData: FormData
+): Promise<UpdateRoutineAssignmentsState> {
+  const { supabase, user } = await getUserOrRedirect();
+  const assignmentIds = Array.from(
+    new Set(
+      formData
+        .getAll("assignment_ids")
+        .map((value) => String(value).trim())
+        .filter(Boolean)
+    )
+  );
+
+  if (!assignmentIds.length) {
+    return {
+      status: "error",
+      message: "Select at least one routine before continuing."
+    };
+  }
+
+  if (assignmentIds.length > 50) {
+    return {
+      status: "error",
+      message: "Select no more than 50 routines at a time."
+    };
+  }
+
+  const { data: client, error: clientError } = await supabase
+    .from("clients")
+    .select("id")
+    .eq("id", clientId)
+    .eq("coach_id", user.id)
+    .eq("status", "active")
+    .maybeSingle();
+
+  if (clientError || !client) {
+    return {
+      status: "error",
+      message: "This client is not active, so their routines cannot be changed."
+    };
+  }
+
+  const currentStatus = nextStatus === "paused" ? "active" : "paused";
+  const { data: assignments, error: assignmentsError } = await supabase
+    .from("client_routines")
+    .select("id, routine_id")
+    .eq("coach_id", user.id)
+    .eq("client_id", clientId)
+    .eq("status", currentStatus)
+    .in("id", assignmentIds);
+
+  if (
+    assignmentsError ||
+    !assignments ||
+    assignments.length !== assignmentIds.length
+  ) {
+    return {
+      status: "error",
+      message:
+        "One or more selected assignments have changed. Refresh the page and try again."
+    };
+  }
+
+  if (nextStatus === "active") {
+    const routineIds = assignments.map((assignment) => assignment.routine_id);
+    const { data: availableRoutines, error: routinesError } = await supabase
+      .from("workout_routines")
+      .select("id")
+      .eq("coach_id", user.id)
+      .is("archived_at", null)
+      .in("id", routineIds);
+
+    if (
+      routinesError ||
+      !availableRoutines ||
+      availableRoutines.length !== routineIds.length
+    ) {
+      return {
+        status: "error",
+        message:
+          "Archived routines cannot be resumed. Restore them before trying again."
+      };
+    }
+  }
+
+  const { data: updatedAssignments, error: updateError } = await supabase
+    .from("client_routines")
+    .update({ status: nextStatus })
+    .eq("coach_id", user.id)
+    .eq("client_id", clientId)
+    .eq("status", currentStatus)
+    .in("id", assignmentIds)
+    .select("id");
+
+  if (updateError || updatedAssignments.length !== assignmentIds.length) {
+    return {
+      status: "error",
+      message: `We could not ${nextStatus === "paused" ? "pause" : "resume"} these routines. Please try again.`
+    };
+  }
+
+  revalidatePath(`/dashboard/clients/${clientId}`);
+  revalidatePath("/dashboard");
+  revalidatePath("/dashboard/routines");
+  revalidatePath("/trainee");
+
+  return {
+    status: "success",
+    message:
+      nextStatus === "paused"
+        ? "Selected routines were paused."
+        : "Selected routines were resumed.",
+    updatedCount: updatedAssignments.length
   };
 }

@@ -37,6 +37,15 @@ export function WorkoutLogForm({ clientId, assignments }: Pick<Props, "clientId"
           </Select>
         </Field>
       </div>
+      <Field label="Duration in minutes" hint="Optional">
+        <Input
+          name="duration_minutes"
+          type="number"
+          min={1}
+          max={1440}
+          inputMode="numeric"
+        />
+      </Field>
       <Field label="Notes">
         <Textarea name="notes" />
       </Field>

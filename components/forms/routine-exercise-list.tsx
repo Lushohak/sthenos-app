@@ -11,6 +11,7 @@ import { removeRoutineExerciseAction, reorderRoutineExercisesAction } from "@/li
 
 type RoutineExercise = {
   id: string;
+  sets: number;
   reps: string;
   rest_seconds: number | null;
   notes: string | null;
@@ -37,6 +38,7 @@ type RoutineExerciseListProps = {
   routineId: string;
   routineExercises: RoutineExercise[];
   readOnly?: boolean;
+  showSets?: boolean;
 };
 
 function moveItem(items: RoutineExercise[], fromId: string, toId: string) {
@@ -54,7 +56,8 @@ function moveItem(items: RoutineExercise[], fromId: string, toId: string) {
 export function RoutineExerciseList({
   routineId,
   routineExercises,
-  readOnly = false
+  readOnly = false,
+  showSets = false
 }: RoutineExerciseListProps) {
   const [items, setItems] = useState(routineExercises);
   const [draggedId, setDraggedId] = useState<string | null>(null);
@@ -136,6 +139,11 @@ export function RoutineExerciseList({
                     ) : null}
                   </div>
                   <div className="mt-3 flex flex-wrap gap-2 text-xs">
+                    {showSets ? (
+                      <span className="rounded-md bg-muted px-2.5 py-1.5">
+                        <span className="text-muted-foreground">Sets:</span> {item.sets}
+                      </span>
+                    ) : null}
                     <span className="rounded-md bg-muted px-2.5 py-1.5">
                       <span className="text-muted-foreground">Reps:</span> {item.reps}
                     </span>
@@ -186,6 +194,7 @@ export function RoutineExerciseList({
               {!readOnly ? <Th className="w-12"><span className="sr-only">Move</span></Th> : null}
               <Th className="w-16">Order</Th>
               <Th>Exercise</Th>
+              {showSets ? <Th>Sets</Th> : null}
               <Th>Reps</Th>
               <Th>Rest</Th>
               <Th>Notes</Th>
@@ -252,6 +261,7 @@ export function RoutineExerciseList({
                       </div>
                     </div>
                   </Td>
+                  {showSets ? <Td className="font-medium">{item.sets}</Td> : null}
                   <Td className="font-medium">{item.reps}</Td>
                   <Td>{item.rest_seconds ? `${item.rest_seconds}s` : "Not set"}</Td>
                   <Td className="max-w-64 text-muted-foreground">{item.notes ?? "No notes"}</Td>

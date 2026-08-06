@@ -115,8 +115,9 @@ export type Database = {
           coach_id: string;
           name: string;
           description: string | null;
-          routine_type: "circuit" | "individual";
+          routine_type: "circuit" | "individual" | "activity" | "gym";
           default_cycles: number;
+          thumbnail_url: string | null;
           archived_at: string | null;
           created_at: string;
           updated_at: string;
@@ -125,8 +126,9 @@ export type Database = {
           coach_id: string;
           name: string;
           description?: string | null;
-          routine_type?: "circuit" | "individual";
+          routine_type?: "circuit" | "individual" | "activity" | "gym";
           default_cycles?: number;
+          thumbnail_url?: string | null;
           archived_at?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["workout_routines"]["Insert"]>;
@@ -146,6 +148,7 @@ export type Database = {
           routine_id: string;
           exercise_id: string;
           position: number;
+          sets: number;
           reps: string;
           rest_seconds: number | null;
           notes: string | null;
@@ -155,6 +158,7 @@ export type Database = {
           routine_id: string;
           exercise_id: string;
           position?: number;
+          sets?: number;
           reps: string;
           rest_seconds?: number | null;
           notes?: string | null;
@@ -220,6 +224,7 @@ export type Database = {
           routine_id: string | null;
           trained_on: string;
           notes: string | null;
+          duration_minutes: number | null;
           created_at: string;
         };
         Insert: {
@@ -228,6 +233,7 @@ export type Database = {
           routine_id?: string | null;
           trained_on: string;
           notes?: string | null;
+          duration_minutes?: number | null;
         };
         Update: Partial<Database["public"]["Tables"]["workout_logs"]["Insert"]>;
         Relationships: [

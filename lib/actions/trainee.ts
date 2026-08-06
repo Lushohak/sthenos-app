@@ -86,11 +86,24 @@ export async function createTraineeWorkoutLogAction(
   const { supabase, client } = await getTraineeOrRedirect();
   const trainedOn = String(formData.get("trained_on") ?? "");
   const today = new Date().toISOString().slice(0, 10);
+  const durationMinutes = optionalNumber(formData, "duration_minutes");
 
   if (!/^\d{4}-\d{2}-\d{2}$/.test(trainedOn) || trainedOn > today) {
     return {
       status: "error",
       message: "Choose today or an earlier training date."
+    };
+  }
+
+  if (
+    durationMinutes !== null &&
+    (!Number.isInteger(durationMinutes) ||
+      durationMinutes < 1 ||
+      durationMinutes > 1440)
+  ) {
+    return {
+      status: "error",
+      message: "Duration must be between 1 and 1,440 minutes."
     };
   }
 
@@ -114,6 +127,7 @@ export async function createTraineeWorkoutLogAction(
     client_id: client.id,
     routine_id: assignment.routine_id,
     trained_on: trainedOn,
+    duration_minutes: durationMinutes,
     notes: optionalString(formData, "notes")
   });
 
