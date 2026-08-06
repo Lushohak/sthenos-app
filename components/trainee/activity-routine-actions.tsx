@@ -7,15 +7,18 @@ import { Field, Input, Textarea } from "@/components/ui/field";
 import { Modal } from "@/components/ui/modal";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { Toast } from "@/components/ui/toast";
+import { RoutinePdfDownload } from "@/components/trainee/routine-pdf-download";
 import {
   createTraineeWorkoutLogAction,
   type TraineeWorkoutLogState
 } from "@/lib/actions/trainee";
+import type { RoutinePdfData } from "@/types/routine-pdf";
 
 type ActivityRoutineActionsProps = {
   assignmentId: string;
   routineName: string;
   today: string;
+  pdfRoutine: RoutinePdfData;
 };
 
 const initialState: TraineeWorkoutLogState = {
@@ -26,7 +29,8 @@ const initialState: TraineeWorkoutLogState = {
 export function ActivityRoutineActions({
   assignmentId,
   routineName,
-  today
+  today,
+  pdfRoutine
 }: ActivityRoutineActionsProps) {
   const formRef = useRef<HTMLFormElement>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -46,7 +50,8 @@ export function ActivityRoutineActions({
 
   return (
     <>
-      <div className="flex justify-end border-t bg-muted/20 p-4 sm:p-5">
+      <div className="flex flex-col gap-2 border-t bg-muted/20 p-4 sm:flex-row sm:justify-end sm:p-5">
+        <RoutinePdfDownload routine={pdfRoutine} />
         <Button type="button" onClick={() => setIsModalOpen(true)}>
           <Activity className="h-4 w-4" aria-hidden="true" />
           Log activity

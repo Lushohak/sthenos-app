@@ -143,6 +143,7 @@ export function WorkoutPlayer({
   const [restSecondsRemaining, setRestSecondsRemaining] = useState(0);
   const [hasRestored, setHasRestored] = useState(false);
   const [isExitModalOpen, setIsExitModalOpen] = useState(false);
+  const [isQuickCompleteModalOpen, setIsQuickCompleteModalOpen] = useState(false);
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const [isToastOpen, setIsToastOpen] = useState(false);
   const [isSoundEnabled, setIsSoundEnabled] = useState(true);
@@ -413,6 +414,7 @@ export function WorkoutPlayer({
     } catch {
       // The completed workout is already persisted in Supabase.
     }
+    setIsQuickCompleteModalOpen(false);
     setIsToastOpen(true);
   }, [actionState.status, storageKey]);
 
@@ -579,6 +581,20 @@ export function WorkoutPlayer({
             </Button>
           </div>
         </div>
+
+        {phase !== "summary" ? (
+          <div className="mb-3 flex justify-end">
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={isPending}
+              onClick={() => setIsQuickCompleteModalOpen(true)}
+            >
+              <Check className="h-4 w-4" aria-hidden="true" />
+              Complete workout
+            </Button>
+          </div>
+        ) : null}
 
         <div
           className="mb-5 h-2 overflow-hidden rounded-full bg-muted"
@@ -853,6 +869,76 @@ export function WorkoutPlayer({
           </div>
         ) : null}
       </section>
+
+      <Modal
+        open={isQuickCompleteModalOpen}
+        onOpenChange={(open) => {
+          if (!isPending) setIsQuickCompleteModalOpen(open);
+        }}
+        title="Complete this workout?"
+        description="Skip the guided steps and add the completed workout directly to your history."
+      >
+        <form action={formAction} className="grid gap-4 p-5">
+          <Field label="Training date">
+            <Input
+              name="trained_on"
+              type="date"
+              value={trainingDate}
+              max={localToday}
+              onChange={(event) => setTrainingDate(event.target.value)}
+              required
+            />
+          </Field>
+          <Field
+            label="Duration in minutes"
+            hint="Optional — enter the approximate workout time."
+          >
+            <Input
+              name="duration_minutes"
+              type="number"
+              min={1}
+              max={1440}
+              inputMode="numeric"
+              placeholder="e.g. 60"
+            />
+          </Field>
+          <Field
+            label="Completion notes"
+            hint="Optional — add anything your coach should know."
+          >
+            <Textarea
+              name="notes"
+              placeholder="Energy, difficulty, pain, or a personal best..."
+            />
+          </Field>
+          {actionState.status === "error" ? (
+            <p
+              className="rounded-md border border-destructive/25 bg-destructive/5 px-3 py-2 text-sm text-destructive"
+              role="alert"
+            >
+              {actionState.message}
+            </p>
+          ) : null}
+          <div className="flex flex-col-reverse gap-2 border-t pt-4 sm:flex-row sm:justify-end">
+            <Button
+              type="button"
+              variant="ghost"
+              disabled={isPending}
+              onClick={() => setIsQuickCompleteModalOpen(false)}
+            >
+              Keep working out
+            </Button>
+            <Button type="submit" disabled={isPending}>
+              {isPending ? (
+                <Spinner className="h-4 w-4" />
+              ) : (
+                <Check className="h-4 w-4" aria-hidden="true" />
+              )}
+              {isPending ? "Saving workout..." : "Save completed workout"}
+            </Button>
+          </div>
+        </form>
+      </Modal>
 
       <Modal
         open={isImageModalOpen}

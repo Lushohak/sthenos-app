@@ -3,16 +3,20 @@
 import { useEffect, useId, useState, type ReactNode } from "react";
 import { Eye, EyeOff, Play } from "lucide-react";
 import { Button, LinkButton } from "@/components/ui/button";
+import { RoutinePdfDownload } from "@/components/trainee/routine-pdf-download";
+import type { RoutinePdfData } from "@/types/routine-pdf";
 
 type WorkoutRoutineActionsProps = {
   assignmentId: string;
   canBegin: boolean;
+  pdfRoutine?: RoutinePdfData;
   children: ReactNode;
 };
 
 export function WorkoutRoutineActions({
   assignmentId,
   canBegin,
+  pdfRoutine,
   children
 }: WorkoutRoutineActionsProps) {
   const previewId = useId();
@@ -46,6 +50,7 @@ export function WorkoutRoutineActions({
           )}
           {isPreviewOpen ? "Hide preview" : "Preview workout"}
         </Button>
+        {pdfRoutine ? <RoutinePdfDownload routine={pdfRoutine} /> : null}
         {canBegin ? (
           <LinkButton href={`/trainee/workouts/${assignmentId}`}>
             <Play className="h-4 w-4 fill-current" aria-hidden="true" />

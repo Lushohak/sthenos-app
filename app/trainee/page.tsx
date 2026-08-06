@@ -16,6 +16,7 @@ import { RoutineThumbnail } from "@/components/routines/routine-thumbnail";
 import { Table, Td, Th } from "@/components/ui/table";
 import { getTraineeOrRedirect } from "@/lib/trainee";
 import { formatDate } from "@/lib/utils";
+import type { RoutinePdfData } from "@/types/routine-pdf";
 
 export default async function TraineeDashboardPage() {
   const { supabase, client } = await getTraineeOrRedirect();
@@ -99,6 +100,37 @@ export default async function TraineeDashboardPage() {
             );
             const isActive = assignment.status === "active";
             const isActivity = routine?.routine_type === "activity";
+            const pdfRoutine: RoutinePdfData | undefined = routine
+              ? {
+                  traineeName: client.name,
+                  routineName: routine.name,
+                  routineDescription: routine.description,
+                  assignmentNotes: assignment.notes,
+                  routineType: routine.routine_type,
+                  defaultCycles: routine.default_cycles,
+                  thumbnailUrl: routine.thumbnail_url,
+                  exercises: routineExercises.flatMap((item) => {
+                    const exercise = Array.isArray(item.exercises)
+                      ? item.exercises[0]
+                      : item.exercises;
+
+                    return exercise
+                      ? [
+                          {
+                            name: exercise.name,
+                            category: exercise.category,
+                            equipment: exercise.equipment,
+                            thumbnailUrl: exercise.thumbnail_url,
+                            sets: item.sets,
+                            reps: item.reps,
+                            restSeconds: item.rest_seconds,
+                            notes: item.notes
+                          }
+                        ]
+                      : [];
+                  })
+                }
+              : undefined;
 
             return (
               <article
@@ -166,11 +198,13 @@ export default async function TraineeDashboardPage() {
                     assignmentId={assignment.id}
                     routineName={routine.name}
                     today={today}
+                    pdfRoutine={pdfRoutine!}
                   />
                 ) : (
                   <WorkoutRoutineActions
                     assignmentId={assignment.id}
                     canBegin={isActive && Boolean(routine) && routineExercises.length > 0}
+                    pdfRoutine={pdfRoutine}
                   >
                     <div className="p-4 sm:p-5">
                     <h4 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
