@@ -1,10 +1,11 @@
 # Sthenos
 
-Sthenos is a workout-management application for fitness coaches and their
-trainees. Coaches can maintain an exercise library, build reusable routines,
-assign them to one or many trainees, and record training and body-progress
-data. Trainees have a separate portal where they can preview assigned routines,
-complete guided workouts, and review their progress.
+Sthenos is a training-management application for fitness coaches and their
+trainees. Coaches can maintain an exercise library, build exercise-based
+Routines, create measurable Activities such as runs or soccer matches, assign
+them to trainees, and review training and body-progress data. Trainees have a
+separate portal where they can perform guided workouts, log Activity results,
+and review one unified training history.
 
 For a detailed inventory of the functionality currently implemented, known
 product boundaries, and possible next development areas, see
@@ -95,7 +96,7 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000). Create a coach account at
 `/auth/sign-up`, then use the coach dashboard to create trainees, exercises,
-and routines.
+Routines, and Activities.
 
 ## End-to-end tests
 

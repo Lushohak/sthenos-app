@@ -10,7 +10,7 @@ export default async function DashboardPage() {
   const weekStart = new Date();
   weekStart.setDate(weekStart.getDate() - 7);
 
-  const [{ count: totalClients }, { data: weeklyLogs }, { data: recentProgress }] =
+  const [{ count: totalClients }, { data: weeklyLogs }, { data: weeklyActivityLogs }, { data: recentProgress }] =
     await Promise.all([
       supabase
         .from("clients")
@@ -23,6 +23,11 @@ export default async function DashboardPage() {
         .eq("coach_id", user.id)
         .gte("trained_on", weekStart.toISOString().slice(0, 10)),
       supabase
+        .from("activity_logs")
+        .select("client_id")
+        .eq("coach_id", user.id)
+        .gte("performed_on", weekStart.toISOString().slice(0, 10)),
+      supabase
         .from("body_progress_entries")
         .select("recorded_on, body_weight, body_fat_percentage, clients(name)")
         .eq("coach_id", user.id)
@@ -30,7 +35,10 @@ export default async function DashboardPage() {
         .limit(5)
     ]);
 
-  const trainedThisWeek = new Set(weeklyLogs?.map((log) => log.client_id)).size;
+  const trainedThisWeek = new Set([
+    ...(weeklyLogs ?? []).map((log) => log.client_id),
+    ...(weeklyActivityLogs ?? []).map((log) => log.client_id)
+  ]).size;
 
   return (
     <>

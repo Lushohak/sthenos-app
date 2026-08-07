@@ -80,6 +80,23 @@ opens its real Supabase action link, and completes the trainee setup flow.
 - Trainee login, preview, guided workout, rest timer, and completion.
 - Completed workout verification in the coach's client history.
 
+### First-class Activities
+
+- Coach creates an Activity with mixed required and optional metrics, default
+  targets, and dedicated thumbnail storage.
+- Coach edits defaults and creates a one-time prescription with a planned date
+  and target overrides.
+- Trainee sees the immutable prescription, logs actual metrics and notes, and
+  receives completion feedback.
+- The log and one-time assignment completion commit atomically.
+- Concurrent one-time submissions create exactly one Activity log.
+- Repeatable Activities accept multiple valid logs while rejecting out-of-range
+  metrics and invalid targets.
+- Another coach cannot read or log against Activity data they do not own.
+- Coach bulk-assigns an Activity, pauses it, archives/restores its template, and
+  resumes it only after restoration.
+- Deleting a client cascades through Activity assignments and logs.
+
 ### Invitation and setup
 
 - Coach sends an invitation from a client profile.
@@ -92,9 +109,15 @@ opens its real Supabase action link, and completes the trainee setup flow.
 
 ```text
 tests/e2e/
+├── activities.spec.ts
+├── archiving.spec.ts
 ├── auth.spec.ts
+├── client-deletion.spec.ts
 ├── golden-workflow.spec.ts
+├── gym-routine.spec.ts
 ├── invitations.spec.ts
+├── multi-routine-assignment.spec.ts
+├── workout-shortcuts.spec.ts
 └── support/
     ├── fixtures.ts
     ├── local-supabase.ts

@@ -33,10 +33,6 @@ export default async function TraineeWorkoutPage({ params }: PageProps) {
     notFound();
   }
 
-  if (routine.routine_type === "activity") {
-    notFound();
-  }
-
   const exercises: WorkoutPlayerExercise[] = [...(routine.routine_exercises ?? [])]
     .sort((a, b) => a.position - b.position)
     .map((item) => {

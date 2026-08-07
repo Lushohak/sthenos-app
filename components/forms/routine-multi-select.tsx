@@ -45,7 +45,6 @@ export function RoutineMultiSelect({
   const selectedRoutines = options.filter((option) =>
     selectedIds.includes(option.id)
   );
-  const availableCount = options.filter((option) => !option.disabled).length;
 
   function updateSelection(nextSelection: string[]) {
     setSelectedIds(nextSelection);
@@ -85,7 +84,7 @@ export function RoutineMultiSelect({
         aria-controls={menuId}
         aria-expanded={isOpen}
         aria-haspopup="listbox"
-        disabled={availableCount === 0}
+        disabled={options.length === 0}
         onClick={() => setIsOpen((current) => !current)}
       >
         <span className="truncate">{triggerText}</span>

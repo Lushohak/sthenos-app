@@ -5,7 +5,6 @@ import { Table, Td, Th } from "@/components/ui/table";
 import { getUserOrRedirect } from "@/lib/auth";
 import { formatDate } from "@/lib/utils";
 import { ArchiveStatusToast } from "@/components/ui/archive-status-toast";
-import { RoutineThumbnail } from "@/components/routines/routine-thumbnail";
 
 type PageProps = {
   searchParams?: Promise<{
@@ -78,21 +77,12 @@ export default async function RoutinesPage({ searchParams }: PageProps) {
                   className="flex items-center gap-3 font-medium text-info hover:text-info/80"
                   href={`/dashboard/routines/${routine.id}`}
                 >
-                  {routine.routine_type === "activity" ? (
-                    <RoutineThumbnail
-                      src={routine.thumbnail_url}
-                      alt=""
-                      className="h-12 w-16 shrink-0"
-                    />
-                  ) : null}
                   <span>{routine.name}</span>
                 </Link>
               </Td>
               <Td>
-                {routine.routine_type === "activity"
-                  ? "Activity"
-                  : routine.routine_type === "gym"
-                    ? "Gym workout"
+                {routine.routine_type === "gym"
+                  ? "Gym workout"
                   : routine.routine_type === "circuit"
                     ? `${routine.default_cycles} cycles`
                     : "Exercise-specific"}

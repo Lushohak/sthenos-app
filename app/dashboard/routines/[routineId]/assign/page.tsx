@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { BulkAssignRoutineForm } from "@/components/forms/bulk-assign-routine-form";
 import { LinkButton } from "@/components/ui/button";
@@ -38,6 +38,19 @@ export default async function BulkAssignRoutinePage({ params }: PageProps) {
   ]);
 
   if (routineError || !routine) {
+    const { data: migratedActivity } = await supabase
+      .from("activities")
+      .select("id, archived_at")
+      .eq("id", routineId)
+      .eq("coach_id", user.id)
+      .maybeSingle();
+    if (migratedActivity) {
+      redirect(
+        migratedActivity.archived_at
+          ? `/dashboard/activities/${migratedActivity.id}`
+          : `/dashboard/activities/${migratedActivity.id}/assign`
+      );
+    }
     notFound();
   }
 

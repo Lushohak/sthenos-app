@@ -1,36 +1,58 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/dashboard/page-header";
+import { StatCard } from "@/components/dashboard/stat-card";
 import { LinkButton } from "@/components/ui/button";
 import {
   BodyProgressForm,
   WorkoutLogForm
 } from "@/components/forms/client-activity-forms";
 import { AssignRoutineForm } from "@/components/forms/assign-routine-form";
+import { AssignActivityForm } from "@/components/forms/assign-activity-form";
 import { TraineeInviteForm } from "@/components/forms/trainee-invite-form";
 import { DeleteClientAccount } from "@/components/clients/delete-client-account";
 import { ArchiveClient } from "@/components/clients/archive-client";
 import { ManageRoutineAssignments } from "@/components/clients/manage-routine-assignments";
+import { ManageActivityAssignments } from "@/components/activities/manage-activity-assignments";
+import { ActivityCompletedToast } from "@/components/activities/activity-completed-toast";
+import { ActivityActions } from "@/components/trainee/activity-actions";
 import { Table, Td, Th } from "@/components/ui/table";
 import { getUserOrRedirect } from "@/lib/auth";
 import { formatDate } from "@/lib/utils";
+import {
+  ACTIVITY_METRIC_KEYS,
+  activityMetricValuesFromLog,
+  formatActivityMetricResult,
+  parseActivityTargets,
+  summarizeActivityLogs
+} from "@/lib/activities";
 
 type PageProps = {
   params: Promise<{ clientId: string }>;
-  searchParams?: Promise<{ invite?: string }>;
+  searchParams?: Promise<{ invite?: string; activityCompleted?: string }>;
 };
 
 export default async function ClientProfilePage({ params, searchParams }: PageProps) {
   const { clientId } = await params;
-  const inviteStatus = (await searchParams)?.invite;
+  const resolvedSearchParams = await searchParams;
+  const inviteStatus = resolvedSearchParams?.invite;
+  const activityCompleted = resolvedSearchParams?.activityCompleted;
   const { supabase, user } = await getUserOrRedirect();
+  const today = new Date().toISOString().slice(0, 10);
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+  const activitySince = thirtyDaysAgo.toISOString().slice(0, 10);
 
   const [
     { data: client, error: clientError },
     { data: routines },
     { data: assignments },
     { data: logs },
-    { data: progress }
+    { data: progress },
+    { data: activities },
+    { data: activityAssignments },
+    { data: activityLogs },
+    { data: recentActivityLogs }
   ] = await Promise.all([
     supabase
       .from("clients")
@@ -62,7 +84,32 @@ export default async function ClientProfilePage({ params, searchParams }: PagePr
       .select("*")
       .eq("coach_id", user.id)
       .eq("client_id", clientId)
-      .order("recorded_on", { ascending: false })
+      .order("recorded_on", { ascending: false }),
+    supabase
+      .from("activities")
+      .select("*")
+      .eq("coach_id", user.id)
+      .is("archived_at", null)
+      .order("name"),
+    supabase
+      .from("client_activities")
+      .select("*, activities(id, name, archived_at, tracked_metrics, required_metrics, default_targets)")
+      .eq("coach_id", user.id)
+      .eq("client_id", clientId)
+      .order("assigned_at", { ascending: false }),
+    supabase
+      .from("activity_logs")
+      .select("*, activities(name), client_activities(targets)")
+      .eq("coach_id", user.id)
+      .eq("client_id", clientId)
+      .order("performed_on", { ascending: false })
+      .limit(20),
+    supabase
+      .from("activity_logs")
+      .select("duration_minutes, distance_km, elevation_gain_m, calories_burned, perceived_intensity")
+      .eq("coach_id", user.id)
+      .eq("client_id", clientId)
+      .gte("performed_on", activitySince)
   ]);
 
   if (clientError || !client) notFound();
@@ -87,9 +134,34 @@ export default async function ClientProfilePage({ params, searchParams }: PagePr
       }
     ];
   });
+  const manageableActivityAssignments = (activityAssignments ?? []).flatMap((assignment) => {
+    if (assignment.status !== "active" && assignment.status !== "paused") return [];
+    const activity = Array.isArray(assignment.activities) ? assignment.activities[0] : assignment.activities;
+    return activity ? [{ id: assignment.id, activityName: activity.name, status: assignment.status, activityArchived: Boolean(activity.archived_at) }] : [];
+  });
+  const activeActivityAssignments = (activityAssignments ?? []).flatMap((assignment) => {
+    if (assignment.status !== "active") return [];
+    const activity = Array.isArray(assignment.activities) ? assignment.activities[0] : assignment.activities;
+    return activity ? [{ ...assignment, activity }] : [];
+  });
+  const trainingHistory = [
+    ...(logs ?? []).map((log) => {
+      const routine = Array.isArray(log.workout_routines) ? log.workout_routines[0] : log.workout_routines;
+      return { id: log.id, type: "Workout", date: log.trained_on, name: routine?.name ?? "Workout", results: log.duration_minutes ? `${log.duration_minutes} min` : "Completed", notes: log.notes };
+    }),
+    ...(activityLogs ?? []).map((log) => {
+      const activity = Array.isArray(log.activities) ? log.activities[0] : log.activities;
+      const values = activityMetricValuesFromLog(log);
+      const assignment = Array.isArray(log.client_activities) ? log.client_activities[0] : log.client_activities;
+      const targets = parseActivityTargets(assignment?.targets ?? null);
+      return { id: log.id, type: "Activity", date: log.performed_on, name: activity?.name ?? "Activity", results: ACTIVITY_METRIC_KEYS.flatMap((key) => values[key] === undefined ? [] : [formatActivityMetricResult(key, values[key]!, targets)]).join(" · ") || "Completed", notes: log.notes };
+    })
+  ].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 10);
+  const activityInsights = summarizeActivityLogs(recentActivityLogs ?? []);
 
   return (
     <>
+      {activityCompleted ? <ActivityCompletedToast activityName={activityCompleted} /> : null}
       <PageHeader
         title={client.name}
         description={client.goal ?? "No goal set yet."}
@@ -218,6 +290,20 @@ export default async function ClientProfilePage({ params, searchParams }: PagePr
                 clientName={client.name}
                 assignments={manageableAssignments}
               />
+              <div>
+                <h2 className="mb-3 font-semibold">Assign Activity</h2>
+                <AssignActivityForm
+                  clientId={client.id}
+                  clientName={client.name}
+                  activities={activities ?? []}
+                  assignedActivityIds={(activityAssignments ?? []).filter((assignment) => assignment.status === "active" || assignment.status === "paused").map((assignment) => assignment.activity_id)}
+                />
+              </div>
+              <ManageActivityAssignments
+                clientId={client.id}
+                clientName={client.name}
+                assignments={manageableActivityAssignments}
+              />
               </>
             ) : (
               <div className="rounded-md border border-info/30 bg-info/5 p-4 text-sm text-muted-foreground shadow-soft">
@@ -229,34 +315,68 @@ export default async function ClientProfilePage({ params, searchParams }: PagePr
           </div>
         </div>
       </section>
+      <section className="mt-8">
+        <h2 className="mb-3 font-semibold">Activity insights · Last 30 days</h2>
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-6">
+          <StatCard label="Activities" value={activityInsights.completions} />
+          {activityInsights.durationMinutes ? <StatCard label="Duration" value={`${activityInsights.durationMinutes} min`} /> : null}
+          {activityInsights.distanceKm ? <StatCard label="Distance" value={`${activityInsights.distanceKm.toFixed(2)} km`} /> : null}
+          {activityInsights.elevationGainM ? <StatCard label="Elevation" value={`${activityInsights.elevationGainM.toFixed(0)} m`} /> : null}
+          {activityInsights.caloriesBurned ? <StatCard label="Est. calories" value={`${activityInsights.caloriesBurned} kcal`} /> : null}
+          {activityInsights.averageIntensity !== null ? <StatCard label="Average intensity" value={`${activityInsights.averageIntensity.toFixed(1)}/10`} /> : null}
+        </div>
+      </section>
       <section className="mt-8 grid gap-6 xl:grid-cols-2">
         <div>
-          <h2 className="mb-3 font-semibold">Training log</h2>
+          <h2 className="mb-3 font-semibold">Training history</h2>
           {client.status !== "archived" ? (
             <WorkoutLogForm clientId={client.id} assignments={(assignments ?? []) as never} />
+          ) : null}
+          {client.status !== "archived" && activeActivityAssignments.length ? (
+            <div className="mt-4 grid gap-3">
+              <h3 className="text-sm font-semibold">Log an Activity for this trainee</h3>
+              {activeActivityAssignments.map((assignment) => (
+                <div key={assignment.id} className="overflow-hidden rounded-md border bg-card shadow-soft">
+                  <div className="px-4 pt-4">
+                    <p className="font-medium">{assignment.activity.name}</p>
+                    <p className="text-xs text-muted-foreground">Use the same fields and targets shown to the trainee.</p>
+                  </div>
+                  <ActivityActions
+                    assignmentId={assignment.id}
+                    activityName={assignment.activity.name}
+                    trackedMetrics={assignment.tracked_metrics}
+                    requiredMetrics={assignment.required_metrics}
+                    targets={parseActivityTargets(assignment.targets)}
+                    today={today}
+                  />
+                </div>
+              ))}
+            </div>
           ) : null}
           <div className={client.status !== "archived" ? "mt-4" : undefined}>
             <Table>
               <thead>
                 <tr>
                   <Th>Date</Th>
-                  <Th>Routine</Th>
-                  <Th>Duration</Th>
+                  <Th>Type</Th>
+                  <Th>Session</Th>
+                  <Th>Results</Th>
                   <Th>Notes</Th>
                 </tr>
               </thead>
               <tbody>
-                {logs?.map((log) => (
-                  <tr key={log.id}>
-                    <Td>{formatDate(log.trained_on)}</Td>
-                    <Td>{Array.isArray(log.workout_routines) ? log.workout_routines[0]?.name : log.workout_routines?.name ?? "None"}</Td>
-                    <Td>{log.duration_minutes ? `${log.duration_minutes} min` : "Not set"}</Td>
-                    <Td>{log.notes ?? "No notes"}</Td>
+                {trainingHistory.map((item) => (
+                  <tr key={`${item.type}-${item.id}`}>
+                    <Td>{formatDate(item.date)}</Td>
+                    <Td>{item.type}</Td>
+                    <Td>{item.name}</Td>
+                    <Td>{item.results}</Td>
+                    <Td>{item.notes ?? "No notes"}</Td>
                   </tr>
                 ))}
-                {!logs?.length ? (
+                {!trainingHistory.length ? (
                   <tr>
-                    <Td colSpan={4}>No completed workouts yet.</Td>
+                    <Td colSpan={5}>No completed training yet.</Td>
                   </tr>
                 ) : null}
               </tbody>

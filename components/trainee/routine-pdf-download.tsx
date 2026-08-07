@@ -38,7 +38,6 @@ function safeFileName(value: string) {
 }
 
 function routineTypeLabel(routine: RoutinePdfData) {
-  if (routine.routineType === "activity") return "Activity";
   if (routine.routineType === "gym") return "Gym workout";
   if (routine.routineType === "circuit") {
     return `${routine.defaultCycles} ${
@@ -337,17 +336,6 @@ export function RoutinePdfDownload({ routine }: RoutinePdfDownloadProps) {
       });
       coverY += 27;
 
-      if (routine.routineType === "activity") {
-        coverY = await addContainedImage(
-          routine.thumbnailUrl,
-          margin,
-          coverY,
-          contentWidth,
-          105
-        );
-        coverY += 8;
-      }
-
       if (routine.routineDescription) {
         pdf.setFont("helvetica", "bold");
         pdf.setFontSize(11);
@@ -358,7 +346,7 @@ export function RoutinePdfDownload({ routine }: RoutinePdfDownloadProps) {
           margin,
           coverY + 6,
           contentWidth,
-          { maxLines: routine.routineType === "activity" ? 4 : 3 }
+          { maxLines: 3 }
         );
         coverY += 5;
       }
@@ -373,7 +361,7 @@ export function RoutinePdfDownload({ routine }: RoutinePdfDownloadProps) {
           margin,
           coverY + 6,
           contentWidth,
-          { maxLines: routine.routineType === "activity" ? 4 : 3 }
+          { maxLines: 3 }
         );
         coverY += 5;
       }

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { BarChart3, Dumbbell, LayoutDashboard, Library, Users } from "lucide-react";
+import { BarChart3, Dumbbell, Footprints, LayoutDashboard, Library, Users } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { SthenosMark } from "@/components/brand/sthenos-logo";
 import { logoutAction } from "@/lib/actions/auth";
@@ -13,6 +13,7 @@ const links = [
   { href: "/dashboard/clients", label: "Clients", icon: Users },
   { href: "/dashboard/exercises", label: "Exercises", icon: Library },
   { href: "/dashboard/routines", label: "Routines", icon: Dumbbell },
+  { href: "/dashboard/activities", label: "Activities", icon: Footprints },
   { href: "/dashboard/progress", label: "Progress", icon: BarChart3 }
 ];
 

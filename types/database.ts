@@ -115,9 +115,8 @@ export type Database = {
           coach_id: string;
           name: string;
           description: string | null;
-          routine_type: "circuit" | "individual" | "activity" | "gym";
+          routine_type: "circuit" | "individual" | "gym";
           default_cycles: number;
-          thumbnail_url: string | null;
           archived_at: string | null;
           created_at: string;
           updated_at: string;
@@ -126,9 +125,8 @@ export type Database = {
           coach_id: string;
           name: string;
           description?: string | null;
-          routine_type?: "circuit" | "individual" | "activity" | "gym";
+          routine_type?: "circuit" | "individual" | "gym";
           default_cycles?: number;
-          thumbnail_url?: string | null;
           archived_at?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["workout_routines"]["Insert"]>;
@@ -253,6 +251,140 @@ export type Database = {
           }
         ];
       };
+      activities: {
+        Row: {
+          id: string;
+          coach_id: string;
+          name: string;
+          description: string | null;
+          thumbnail_url: string | null;
+          tracked_metrics: Database["public"]["Enums"]["activity_metric"][];
+          required_metrics: Database["public"]["Enums"]["activity_metric"][];
+          default_targets: Json;
+          archived_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          coach_id: string;
+          name: string;
+          description?: string | null;
+          thumbnail_url?: string | null;
+          tracked_metrics?: Database["public"]["Enums"]["activity_metric"][];
+          required_metrics?: Database["public"]["Enums"]["activity_metric"][];
+          default_targets?: Json;
+          archived_at?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["activities"]["Insert"]>;
+        Relationships: [
+          {
+            foreignKeyName: "activities_coach_id_fkey";
+            columns: ["coach_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
+      client_activities: {
+        Row: {
+          id: string;
+          coach_id: string;
+          client_id: string;
+          activity_id: string;
+          assignment_mode: Database["public"]["Enums"]["activity_assignment_mode"];
+          planned_for: string | null;
+          tracked_metrics: Database["public"]["Enums"]["activity_metric"][];
+          required_metrics: Database["public"]["Enums"]["activity_metric"][];
+          targets: Json;
+          assigned_at: string;
+          status: "active" | "completed" | "paused";
+          notes: string | null;
+        };
+        Insert: {
+          coach_id: string;
+          client_id: string;
+          activity_id: string;
+          assignment_mode?: Database["public"]["Enums"]["activity_assignment_mode"];
+          planned_for?: string | null;
+          tracked_metrics?: Database["public"]["Enums"]["activity_metric"][];
+          required_metrics?: Database["public"]["Enums"]["activity_metric"][];
+          targets?: Json;
+          status?: "active" | "completed" | "paused";
+          notes?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["client_activities"]["Insert"]>;
+        Relationships: [
+          {
+            foreignKeyName: "client_activities_client_id_fkey";
+            columns: ["client_id"];
+            isOneToOne: false;
+            referencedRelation: "clients";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "client_activities_activity_id_fkey";
+            columns: ["activity_id"];
+            isOneToOne: false;
+            referencedRelation: "activities";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
+      activity_logs: {
+        Row: {
+          id: string;
+          coach_id: string;
+          client_id: string;
+          activity_id: string;
+          assignment_id: string | null;
+          performed_on: string;
+          duration_minutes: number | null;
+          distance_km: number | null;
+          elevation_gain_m: number | null;
+          calories_burned: number | null;
+          perceived_intensity: number | null;
+          notes: string | null;
+          created_at: string;
+        };
+        Insert: {
+          coach_id: string;
+          client_id: string;
+          activity_id: string;
+          assignment_id?: string | null;
+          performed_on: string;
+          duration_minutes?: number | null;
+          distance_km?: number | null;
+          elevation_gain_m?: number | null;
+          calories_burned?: number | null;
+          perceived_intensity?: number | null;
+          notes?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["activity_logs"]["Insert"]>;
+        Relationships: [
+          {
+            foreignKeyName: "activity_logs_client_id_fkey";
+            columns: ["client_id"];
+            isOneToOne: false;
+            referencedRelation: "clients";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "activity_logs_activity_id_fkey";
+            columns: ["activity_id"];
+            isOneToOne: false;
+            referencedRelation: "activities";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "activity_logs_assignment_id_fkey";
+            columns: ["assignment_id"];
+            isOneToOne: false;
+            referencedRelation: "client_activities";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
       body_progress_entries: {
         Row: {
           id: string;
@@ -300,11 +432,31 @@ export type Database = {
           name: string;
         }[];
       };
+      create_assigned_activity_log: {
+        Args: {
+          target_assignment_id: string;
+          target_performed_on: string;
+          target_duration_minutes?: number | null;
+          target_distance_km?: number | null;
+          target_elevation_gain_m?: number | null;
+          target_calories_burned?: number | null;
+          target_perceived_intensity?: number | null;
+          target_notes?: string | null;
+        };
+        Returns: string;
+      };
     };
     Enums: {
       client_status: "active" | "paused" | "archived";
       assignment_status: "active" | "completed" | "paused";
       account_role: "coach" | "trainee";
+      activity_metric:
+        | "duration_minutes"
+        | "distance_km"
+        | "elevation_gain_m"
+        | "calories_burned"
+        | "perceived_intensity";
+      activity_assignment_mode: "repeatable" | "one_time";
     };
     CompositeTypes: {};
   };

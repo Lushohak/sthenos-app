@@ -107,9 +107,12 @@ export const test = base.extend<TestFixtures>({
       if (user.role === "coach") {
         const ownedTables = [
           "body_progress_entries",
+          "activity_logs",
           "workout_logs",
+          "client_activities",
           "client_routines",
           "clients",
+          "activities",
           "workout_routines",
           "exercises"
         ];

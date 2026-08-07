@@ -19,43 +19,6 @@ function numberWithDefault(formData: FormData, key: string, fallback: number) {
   return Number.isFinite(value) ? value : fallback;
 }
 
-const ROUTINE_THUMBNAIL_TYPES = new Set([
-  "image/jpeg",
-  "image/png",
-  "image/webp",
-  "image/gif"
-]);
-const MAX_ROUTINE_THUMBNAIL_SIZE = 1024 * 1024;
-
-async function uploadRoutineThumbnail(
-  formData: FormData,
-  coachId: string
-) {
-  const file = formData.get("thumbnail_file");
-
-  if (!(file instanceof File) || file.size === 0) return null;
-
-  if (file.size > MAX_ROUTINE_THUMBNAIL_SIZE) {
-    throw new Error("Routine thumbnail must be 1 MB or smaller.");
-  }
-
-  if (!ROUTINE_THUMBNAIL_TYPES.has(file.type)) {
-    throw new Error("Routine thumbnail must be a PNG, JPEG, WebP, or GIF image.");
-  }
-
-  const { supabase } = await getUserOrRedirect();
-  const extension = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
-  const path = `${coachId}/${crypto.randomUUID()}.${extension}`;
-  const { error } = await supabase.storage
-    .from("routine-media")
-    .upload(path, file, { cacheControl: "3600", upsert: false });
-
-  if (error) throw new Error(error.message);
-
-  const { data } = supabase.storage.from("routine-media").getPublicUrl(path);
-  return data.publicUrl;
-}
-
 export type BulkAssignRoutineState = {
   status: "idle" | "success" | "error";
   message: string;
@@ -70,15 +33,9 @@ export type ArchiveRoutineResult =
 export async function createRoutineAction(formData: FormData) {
   const { supabase, user } = await getUserOrRedirect();
   const requestedType = String(formData.get("routine_type") ?? "circuit");
-  const routineType = ["circuit", "individual", "activity", "gym"].includes(
-    requestedType
-  )
-    ? (requestedType as "circuit" | "individual" | "activity" | "gym")
+  const routineType = ["circuit", "individual", "gym"].includes(requestedType)
+    ? (requestedType as "circuit" | "individual" | "gym")
     : "circuit";
-  const thumbnailUrl =
-    routineType === "activity"
-      ? await uploadRoutineThumbnail(formData, user.id)
-      : null;
 
   const { data, error } = await supabase
     .from("workout_routines")
@@ -88,10 +45,7 @@ export async function createRoutineAction(formData: FormData) {
       description: optionalString(formData, "description"),
       routine_type: routineType,
       default_cycles:
-        routineType === "activity" || routineType === "gym"
-          ? 1
-          : numberWithDefault(formData, "default_cycles", 3),
-      thumbnail_url: thumbnailUrl
+        routineType === "gym" ? 1 : numberWithDefault(formData, "default_cycles", 3)
     })
     .select("id")
     .single();
@@ -116,10 +70,6 @@ export async function addRoutineExerciseAction(routineId: string, formData: Form
 
   if (!routine) {
     throw new Error("Archived routines cannot be edited.");
-  }
-
-  if (routine.routine_type === "activity") {
-    throw new Error("Activity routines do not use exercise lists.");
   }
 
   const { error } = await supabase.from("routine_exercises").insert({

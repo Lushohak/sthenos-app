@@ -14,8 +14,7 @@ export type RoutinePdfData = {
   routineName: string;
   routineDescription: string | null;
   assignmentNotes: string | null;
-  routineType: "circuit" | "individual" | "activity" | "gym";
+  routineType: "circuit" | "individual" | "gym";
   defaultCycles: number;
-  thumbnailUrl: string | null;
   exercises: RoutinePdfExercise[];
 };
