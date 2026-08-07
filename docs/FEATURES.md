@@ -10,8 +10,8 @@ assigned, measurable event such as Walking, Hiking, Jogging, or a Soccer Match.
 
 - **Coach:** owns and manages trainees, exercises, Routines, Activities,
   assignments, training logs, and body-progress data.
-- **Trainee:** performs assigned Routines, logs assigned Activities, and reviews
-  their own progress and combined training history.
+- **Trainee:** performs assigned Routines, logs assigned Activities and body
+  measurements, and reviews their own progress and combined training history.
 
 Supabase authentication and row-level security isolate coach-owned data and
 limit trainees to their linked profile, assignments, and logs.
@@ -26,7 +26,7 @@ limit trainees to their linked profile, assignments, and logs.
 - [x] Invite trainees by email and resend password setup links.
 - [x] Show friendly invitation errors and request loading states.
 - [x] Record body measurements and completed exercise-based workouts on behalf
-  of a trainee.
+  of a trainee, with measurement history showing who submitted each entry.
 - [x] Review each trainee's assignments, combined training history, Activity
   insights, and body-progress history.
 
@@ -105,8 +105,22 @@ exports, and generated reports are not yet available.
 - [x] Accept a coach invitation, set a password, log in, and enter a
   role-specific portal.
 - [x] Navigate between Home, Progress, and Peers on desktop and mobile.
-- [x] View the names of other active trainees with the same coach without
-  exposing private measurements, contact details, or notes.
+
+### Peers and consistency
+
+- [x] View only the first names of active trainees working with the same coach,
+  ordered alphabetically without rankings.
+- [x] See a weekly consistency streak and the last three shared Workout or
+  Activity names, types, and dates for each sharing peer.
+- [x] Count existing training history toward forgiving Monday–Sunday streaks,
+  with the current week remaining open until Sunday.
+- [x] Turn activity sharing off or on with reciprocal visibility. Names remain
+  visible while training details are private.
+- [x] Keep measurements, results, duration, notes, contact information, and
+  coach notes out of the peer feed.
+
+Current boundary: Peers does not include rankings, points, reactions, comments,
+challenges, direct messaging, or notifications.
 
 ### Activities
 
@@ -139,9 +153,11 @@ personal records.
 - [x] Review unified Workout and Activity counts and chronological history.
 - [x] Review relevant 30-day Activity metric totals and averages.
 - [x] Review latest weight, weight change, and body measurements.
+- [x] Log weight, body-fat percentage, muscle-mass percentage, circumferences,
+  and notes directly into the progress history shared with their coach.
 
-Current boundary: trainees cannot submit their own body measurements or
-progress photos.
+Current boundary: body-progress entries do not support photos, editing,
+deletion, or a coach approval workflow.
 
 ## Platform behavior
 
@@ -179,7 +195,7 @@ progress photos.
 
 - [ ] Add charts, comparisons, date filters, and CSV/PDF exports.
 - [ ] Add detailed completed-session views.
-- [ ] Let trainees submit measurements or check-ins for coach review.
+- [ ] Add optional progress photos and richer check-ins for coach review.
 
 ## Keeping this document current
 

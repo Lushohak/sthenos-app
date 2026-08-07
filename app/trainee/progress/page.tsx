@@ -1,6 +1,7 @@
 import { Activity, Scale } from "lucide-react";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { StatCard } from "@/components/dashboard/stat-card";
+import { BodyProgressForm } from "@/components/forms/body-progress-form";
 import { Table, Td, Th } from "@/components/ui/table";
 import {
   ACTIVITY_METRIC_KEYS,
@@ -14,6 +15,7 @@ import { formatDate } from "@/lib/utils";
 
 export default async function TraineeProgressPage() {
   const { supabase, client } = await getTraineeOrRedirect();
+  const today = new Date().toISOString().slice(0, 10);
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
   const since = thirtyDaysAgo.toISOString().slice(0, 10);
@@ -65,6 +67,12 @@ export default async function TraineeProgressPage() {
         <StatCard label="Weight change" value={weightChange === null ? "Not enough data" : `${weightChange > 0 ? "+" : ""}${weightChange.toFixed(1)} kg`} detail={firstProgress ? `Since ${formatDate(firstProgress.recorded_on)}` : "From your first entry"} />
       </section>
 
+      <section className="mt-8" id="log-progress">
+        <h2 className="mb-1 flex items-center gap-2 text-lg font-semibold"><Scale className="h-5 w-5 text-primary" aria-hidden="true" />Log body progress</h2>
+        <p className="mb-3 text-sm text-muted-foreground">Record your latest measurements. Your coach will see them in your shared progress history.</p>
+        <BodyProgressForm clientId={client.id} today={today} submitter="trainee" />
+      </section>
+
       <section className="mt-8">
         <h2 className="mb-3 flex items-center gap-2 text-lg font-semibold"><Activity className="h-5 w-5 text-primary" aria-hidden="true" />Activity insights · Last 30 days</h2>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
@@ -80,10 +88,10 @@ export default async function TraineeProgressPage() {
       <section className="mt-8">
         <h2 className="mb-3 flex items-center gap-2 text-lg font-semibold"><Scale className="h-5 w-5 text-primary" aria-hidden="true" />Body progress</h2>
         <Table>
-          <thead><tr><Th>Date</Th><Th>Weight</Th><Th>Body fat</Th><Th>Waist</Th><Th>Notes</Th></tr></thead>
+          <thead><tr><Th>Date</Th><Th>Weight</Th><Th>Body fat</Th><Th>Muscle mass</Th><Th>Waist</Th><Th>Chest</Th><Th>Arms</Th><Th>Legs</Th><Th>Added by</Th><Th>Notes</Th></tr></thead>
           <tbody>
-            {progress?.map((entry) => <tr key={entry.id}><Td>{formatDate(entry.recorded_on)}</Td><Td>{entry.body_weight} kg</Td><Td>{entry.body_fat_percentage !== null ? `${entry.body_fat_percentage}%` : "Not set"}</Td><Td>{entry.waist !== null ? `${entry.waist} cm` : "Not set"}</Td><Td>{entry.notes ?? "No notes"}</Td></tr>)}
-            {!progress?.length ? <tr><Td colSpan={5}>No body progress entries yet.</Td></tr> : null}
+            {progress?.map((entry) => <tr key={entry.id}><Td>{formatDate(entry.recorded_on)}</Td><Td>{entry.body_weight} kg</Td><Td>{entry.body_fat_percentage !== null ? `${entry.body_fat_percentage}%` : "Not set"}</Td><Td>{entry.muscle_mass_percentage !== null ? `${entry.muscle_mass_percentage}%` : "Not set"}</Td><Td>{entry.waist !== null ? `${entry.waist} cm` : "Not set"}</Td><Td>{entry.chest !== null ? `${entry.chest} cm` : "Not set"}</Td><Td>{entry.arms !== null ? `${entry.arms} cm` : "Not set"}</Td><Td>{entry.legs !== null ? `${entry.legs} cm` : "Not set"}</Td><Td>{entry.recorded_by === client.client_user_id ? "You" : entry.recorded_by ? "Coach" : "Unknown"}</Td><Td>{entry.notes ?? "No notes"}</Td></tr>)}
+            {!progress?.length ? <tr><Td colSpan={10}>No body progress entries yet.</Td></tr> : null}
           </tbody>
         </Table>
       </section>

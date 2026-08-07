@@ -105,6 +105,26 @@ opens its real Supabase action link, and completes the trainee setup flow.
 - The trainee sets a password and enters the trainee portal.
 - The client record stores the linked Auth user and acceptance timestamp.
 
+### Trainee body progress
+
+- A trainee records weight, body-fat percentage, muscle-mass percentage,
+  circumferences, and notes from the Progress page.
+- The entry records the trainee as its submitter and appears immediately in the
+  coach's shared client history.
+- An unrelated trainee cannot read or add body-progress entries for that client.
+
+### Peers and weekly streaks
+
+- Historical Workout and Activity logs combine into Monday–Sunday consistency
+  streaks, with same-day sessions counted once and a current-week grace period.
+- The peer feed returns only the latest three session names, types, and dates;
+  only first names are exposed, and direct access to peer logs and their private
+  fields remains blocked.
+- Archived and outside-coach trainees remain hidden, and a missed week resets
+  the streak.
+- Turning sharing off hides activity reciprocally while preserving names and
+  private self-progress; turning it back on restores the complete history.
+
 ## Test organization
 
 ```text
@@ -117,6 +137,8 @@ tests/e2e/
 ├── gym-routine.spec.ts
 ├── invitations.spec.ts
 ├── multi-routine-assignment.spec.ts
+├── peers.spec.ts
+├── trainee-progress.spec.ts
 ├── workout-shortcuts.spec.ts
 └── support/
     ├── fixtures.ts

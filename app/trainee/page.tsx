@@ -15,6 +15,7 @@ import { StatCard } from "@/components/dashboard/stat-card";
 import { ExerciseThumb } from "@/components/exercises/exercise-thumb";
 import { ActivityActions } from "@/components/trainee/activity-actions";
 import { WorkoutRoutineActions } from "@/components/trainee/workout-routine-actions";
+import { LinkButton } from "@/components/ui/button";
 import { Table, Td, Th } from "@/components/ui/table";
 import {
   ACTIVITY_METRIC_KEYS,
@@ -119,7 +120,7 @@ export default async function TraineeDashboardPage({ searchParams }: PageProps) 
         <StatCard label="Active routines" value={routineAssignments?.length ?? 0} />
         <StatCard label="Active Activities" value={activityAssignments?.length ?? 0} />
         <StatCard label="Completed sessions" value={(workoutCount ?? 0) + (activityCount ?? 0)} detail="Workouts and Activities" />
-        <StatCard label="Latest weight" value={latestProgress ? `${latestProgress.body_weight} kg` : "No data"} detail={latestProgress ? formatDate(latestProgress.recorded_on) : "Ask your coach to add an entry"} />
+        <StatCard label="Latest weight" value={latestProgress ? `${latestProgress.body_weight} kg` : "No data"} detail={latestProgress ? formatDate(latestProgress.recorded_on) : "Add an entry in Progress"} />
       </section>
 
       <section className="mt-8">
@@ -249,12 +250,15 @@ export default async function TraineeDashboardPage({ searchParams }: PageProps) 
           </Table>
         </div>
         <div className="min-w-0">
-          <h2 className="mb-3 text-lg font-semibold">Body progress</h2>
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <h2 className="text-lg font-semibold">Body progress</h2>
+            <LinkButton href="/trainee/progress#log-progress" variant="secondary" className="h-9 px-3">Add progress</LinkButton>
+          </div>
           <Table>
-            <thead><tr><Th>Date</Th><Th>Weight</Th><Th>Body fat</Th><Th>Waist</Th></tr></thead>
+            <thead><tr><Th>Date</Th><Th>Weight</Th><Th>Body fat</Th><Th>Muscle mass</Th><Th>Waist</Th></tr></thead>
             <tbody>
-              {progress?.map((entry) => <tr key={entry.id}><Td>{formatDate(entry.recorded_on)}</Td><Td>{entry.body_weight} kg</Td><Td>{entry.body_fat_percentage !== null ? `${entry.body_fat_percentage}%` : "Not set"}</Td><Td>{entry.waist !== null ? `${entry.waist} cm` : "Not set"}</Td></tr>)}
-              {!progress?.length ? <tr><Td colSpan={4}>No body progress entries yet.</Td></tr> : null}
+              {progress?.map((entry) => <tr key={entry.id}><Td>{formatDate(entry.recorded_on)}</Td><Td>{entry.body_weight} kg</Td><Td>{entry.body_fat_percentage !== null ? `${entry.body_fat_percentage}%` : "Not set"}</Td><Td>{entry.muscle_mass_percentage !== null ? `${entry.muscle_mass_percentage}%` : "Not set"}</Td><Td>{entry.waist !== null ? `${entry.waist} cm` : "Not set"}</Td></tr>)}
+              {!progress?.length ? <tr><Td colSpan={5}>No body progress entries yet.</Td></tr> : null}
             </tbody>
           </Table>
         </div>

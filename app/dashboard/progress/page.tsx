@@ -103,6 +103,7 @@ export default async function ProgressPage() {
             <Th>Date</Th>
             <Th>Weight</Th>
             <Th>Body fat</Th>
+            <Th>Muscle mass</Th>
             <Th>Waist</Th>
             <Th>Chest</Th>
             <Th>Arms</Th>
@@ -125,17 +126,18 @@ export default async function ProgressPage() {
                 </Td>
                 <Td>{formatDate(entry.recorded_on)}</Td>
                 <Td>{entry.body_weight} kg</Td>
-                <Td>{entry.body_fat_percentage ? `${entry.body_fat_percentage}%` : "Not set"}</Td>
-                <Td>{entry.waist ?? "Not set"}</Td>
-                <Td>{entry.chest ?? "Not set"}</Td>
-                <Td>{entry.arms ?? "Not set"}</Td>
-                <Td>{entry.legs ?? "Not set"}</Td>
+                <Td>{entry.body_fat_percentage !== null ? `${entry.body_fat_percentage}%` : "Not set"}</Td>
+                <Td>{entry.muscle_mass_percentage !== null ? `${entry.muscle_mass_percentage}%` : "Not set"}</Td>
+                <Td>{entry.waist !== null ? `${entry.waist} cm` : "Not set"}</Td>
+                <Td>{entry.chest !== null ? `${entry.chest} cm` : "Not set"}</Td>
+                <Td>{entry.arms !== null ? `${entry.arms} cm` : "Not set"}</Td>
+                <Td>{entry.legs !== null ? `${entry.legs} cm` : "Not set"}</Td>
               </tr>
             );
           })}
           {!entries?.length ? (
             <tr>
-              <Td colSpan={8}>No progress entries yet.</Td>
+              <Td colSpan={9}>No progress entries yet.</Td>
             </tr>
           ) : null}
         </tbody>

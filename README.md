@@ -4,8 +4,9 @@ Sthenos is a training-management application for fitness coaches and their
 trainees. Coaches can maintain an exercise library, build exercise-based
 Routines, create measurable Activities such as runs or soccer matches, assign
 them to trainees, and review training and body-progress data. Trainees have a
-separate portal where they can perform guided workouts, log Activity results,
-and review one unified training history.
+separate portal where they can perform guided workouts, log Activity results
+and body measurements, review one unified training history, and build friendly
+weekly consistency streaks with peers who share the same coach.
 
 For a detailed inventory of the functionality currently implemented, known
 product boundaries, and possible next development areas, see

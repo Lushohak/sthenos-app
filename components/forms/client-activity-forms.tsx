@@ -1,7 +1,4 @@
-import {
-  createBodyProgressAction,
-  createWorkoutLogAction
-} from "@/lib/actions/clients";
+import { createWorkoutLogAction } from "@/lib/actions/clients";
 import { Field, Input, Select, Textarea } from "@/components/ui/field";
 import { SubmitButton } from "@/components/ui/submit-button";
 import type { Database } from "@/types/database";
@@ -52,46 +49,6 @@ export function WorkoutLogForm({ clientId, assignments }: Pick<Props, "clientId"
       <SubmitButton className="w-fit" pendingLabel="Saving workout...">
         Mark completed
       </SubmitButton>
-    </form>
-  );
-}
-
-export function BodyProgressForm({ clientId }: Pick<Props, "clientId">) {
-  return (
-    <form action={createBodyProgressAction.bind(null, clientId)} className="grid gap-4 rounded-md border bg-card p-4 shadow-soft">
-      <div className="grid gap-4 sm:grid-cols-3">
-        <Field label="Recorded on">
-          <Input name="recorded_on" type="date" defaultValue={new Date().toISOString().slice(0, 10)} required />
-        </Field>
-        <Field label="Body weight">
-          <Input name="body_weight" type="number" min="1" step="0.1" required />
-        </Field>
-        <Field label="Body fat %">
-          <Input name="body_fat_percentage" type="number" min="0" max="100" step="0.1" />
-        </Field>
-      </div>
-      <div className="grid gap-4 sm:grid-cols-4">
-        <Field label="Waist">
-          <Input name="waist" type="number" min="1" step="0.1" />
-        </Field>
-        <Field label="Chest">
-          <Input name="chest" type="number" min="1" step="0.1" />
-        </Field>
-        <Field label="Arms">
-          <Input name="arms" type="number" min="1" step="0.1" />
-        </Field>
-        <Field label="Legs">
-          <Input name="legs" type="number" min="1" step="0.1" />
-        </Field>
-      </div>
-      <Field label="Notes">
-        <Textarea name="notes" />
-      </Field>
-      <SubmitButton className="w-fit" pendingLabel="Adding progress...">
-        Add progress
-      </SubmitButton>
-      {/* TODO: Add progress photo uploads with Supabase Storage here. */}
-      {/* TODO: Add AI progress insights once enough history exists. */}
     </form>
   );
 }

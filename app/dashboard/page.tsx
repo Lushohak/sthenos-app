@@ -29,7 +29,7 @@ export default async function DashboardPage() {
         .gte("performed_on", weekStart.toISOString().slice(0, 10)),
       supabase
         .from("body_progress_entries")
-        .select("recorded_on, body_weight, body_fat_percentage, clients(name)")
+        .select("recorded_on, body_weight, body_fat_percentage, muscle_mass_percentage, clients(name)")
         .eq("coach_id", user.id)
         .order("recorded_on", { ascending: false })
         .limit(5)
@@ -61,6 +61,7 @@ export default async function DashboardPage() {
               <Th>Date</Th>
               <Th>Weight</Th>
               <Th>Body fat</Th>
+              <Th>Muscle mass</Th>
             </tr>
           </thead>
           <tbody>
@@ -71,13 +72,14 @@ export default async function DashboardPage() {
                 <Td>{(client as { name?: string } | null)?.name ?? "Unknown"}</Td>
                 <Td>{formatDate(entry.recorded_on)}</Td>
                 <Td>{entry.body_weight} kg</Td>
-                <Td>{entry.body_fat_percentage ? `${entry.body_fat_percentage}%` : "Not set"}</Td>
+                <Td>{entry.body_fat_percentage !== null ? `${entry.body_fat_percentage}%` : "Not set"}</Td>
+                <Td>{entry.muscle_mass_percentage !== null ? `${entry.muscle_mass_percentage}%` : "Not set"}</Td>
               </tr>
               );
             })}
             {!recentProgress?.length ? (
               <tr>
-                <Td colSpan={4}>No progress updates yet.</Td>
+                <Td colSpan={5}>No progress updates yet.</Td>
               </tr>
             ) : null}
           </tbody>

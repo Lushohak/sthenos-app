@@ -3,10 +3,8 @@ import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { LinkButton } from "@/components/ui/button";
-import {
-  BodyProgressForm,
-  WorkoutLogForm
-} from "@/components/forms/client-activity-forms";
+import { WorkoutLogForm } from "@/components/forms/client-activity-forms";
+import { BodyProgressForm } from "@/components/forms/body-progress-form";
 import { AssignRoutineForm } from "@/components/forms/assign-routine-form";
 import { AssignActivityForm } from "@/components/forms/assign-activity-form";
 import { TraineeInviteForm } from "@/components/forms/trainee-invite-form";
@@ -385,7 +383,9 @@ export default async function ClientProfilePage({ params, searchParams }: PagePr
         </div>
         <div>
           <h2 className="mb-3 font-semibold">Body progress</h2>
-          {client.status !== "archived" ? <BodyProgressForm clientId={client.id} /> : null}
+          {client.status !== "archived" ? (
+            <BodyProgressForm clientId={client.id} today={today} submitter="coach" />
+          ) : null}
           <div className={client.status !== "archived" ? "mt-4" : undefined}>
             <Table>
               <thead>
@@ -393,7 +393,9 @@ export default async function ClientProfilePage({ params, searchParams }: PagePr
                   <Th>Date</Th>
                   <Th>Weight</Th>
                   <Th>Body fat</Th>
+                  <Th>Muscle mass</Th>
                   <Th>Waist</Th>
+                  <Th>Added by</Th>
                 </tr>
               </thead>
               <tbody>
@@ -401,13 +403,15 @@ export default async function ClientProfilePage({ params, searchParams }: PagePr
                   <tr key={entry.id}>
                     <Td>{formatDate(entry.recorded_on)}</Td>
                     <Td>{entry.body_weight} kg</Td>
-                    <Td>{entry.body_fat_percentage ? `${entry.body_fat_percentage}%` : "Not set"}</Td>
-                    <Td>{entry.waist ?? "Not set"}</Td>
+                    <Td>{entry.body_fat_percentage !== null ? `${entry.body_fat_percentage}%` : "Not set"}</Td>
+                    <Td>{entry.muscle_mass_percentage !== null ? `${entry.muscle_mass_percentage}%` : "Not set"}</Td>
+                    <Td>{entry.waist !== null ? `${entry.waist} cm` : "Not set"}</Td>
+                    <Td>{entry.recorded_by === client.client_user_id ? "Trainee" : entry.recorded_by ? "Coach" : "Unknown"}</Td>
                   </tr>
                 ))}
                 {!progress?.length ? (
                   <tr>
-                    <Td colSpan={4}>No progress entries yet.</Td>
+                    <Td colSpan={6}>No progress entries yet.</Td>
                   </tr>
                 ) : null}
               </tbody>

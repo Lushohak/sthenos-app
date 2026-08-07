@@ -42,6 +42,7 @@ export type Database = {
           goal: string | null;
           notes: string | null;
           status: "active" | "paused" | "archived";
+          peer_activity_sharing_enabled: boolean;
           invited_at: string | null;
           invitation_accepted_at: string | null;
           created_at: string;
@@ -56,6 +57,7 @@ export type Database = {
           goal?: string | null;
           notes?: string | null;
           status?: "active" | "paused" | "archived";
+          peer_activity_sharing_enabled?: boolean;
           invited_at?: string | null;
           invitation_accepted_at?: string | null;
         };
@@ -393,11 +395,13 @@ export type Database = {
           recorded_on: string;
           body_weight: number;
           body_fat_percentage: number | null;
+          muscle_mass_percentage: number | null;
           waist: number | null;
           chest: number | null;
           arms: number | null;
           legs: number | null;
           notes: string | null;
+          recorded_by: string | null;
           created_at: string;
         };
         Insert: {
@@ -406,11 +410,13 @@ export type Database = {
           recorded_on: string;
           body_weight: number;
           body_fat_percentage?: number | null;
+          muscle_mass_percentage?: number | null;
           waist?: number | null;
           chest?: number | null;
           arms?: number | null;
           legs?: number | null;
           notes?: string | null;
+          recorded_by?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["body_progress_entries"]["Insert"]>;
         Relationships: [
@@ -420,17 +426,37 @@ export type Database = {
             isOneToOne: false;
             referencedRelation: "clients";
             referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "body_progress_entries_recorded_by_fkey";
+            columns: ["recorded_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
           }
         ];
       };
     };
     Views: {};
     Functions: {
-      get_trainee_peers: {
+      get_trainee_social_feed: {
         Args: Record<string, never>;
         Returns: {
+          client_id: string;
           name: string;
+          is_viewer: boolean;
+          sharing_enabled: boolean;
+          activity_visible: boolean;
+          current_streak_weeks: number | null;
+          trained_this_week: boolean | null;
+          recent_trainings: Json;
         }[];
+      };
+      set_peer_activity_sharing: {
+        Args: {
+          target_enabled: boolean;
+        };
+        Returns: boolean;
       };
       create_assigned_activity_log: {
         Args: {
