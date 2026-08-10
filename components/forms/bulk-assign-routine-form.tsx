@@ -8,6 +8,7 @@ import {
   useState
 } from "react";
 import { CheckCircle2, Search, Users } from "lucide-react";
+import { useRouter } from "next/navigation";
 import {
   bulkAssignRoutineAction,
   type BulkAssignRoutineState
@@ -44,6 +45,7 @@ export function BulkAssignRoutineForm({
   routineDescription,
   trainees
 }: BulkAssignRoutineFormProps) {
+  const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
   const [query, setQuery] = useState("");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -89,7 +91,8 @@ export function BulkAssignRoutineForm({
     formRef.current?.reset();
     setSelectedIds(new Set());
     setIsToastOpen(true);
-  }, [state]);
+    router.refresh();
+  }, [router, state]);
 
   function toggleTrainee(traineeId: string) {
     setSelectedIds((current) => {

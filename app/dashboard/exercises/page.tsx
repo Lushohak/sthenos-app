@@ -37,7 +37,14 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
       <PageHeader
         title="Exercises"
         description="Manage reusable movements for routine creation."
-        action={<LinkButton href="/dashboard/exercises/new">New exercise</LinkButton>}
+        action={
+          <div className="flex flex-wrap gap-2">
+            <LinkButton href="/dashboard/exercises/bulk-new" variant="secondary">
+              Bulk create
+            </LinkButton>
+            <LinkButton href="/dashboard/exercises/new">New exercise</LinkButton>
+          </div>
+        }
       />
       <form className="mb-4 flex max-w-xl gap-2">
         <div className="relative flex-1">

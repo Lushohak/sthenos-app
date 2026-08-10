@@ -19,6 +19,7 @@ export default async function RoutinesPage({ searchParams }: PageProps) {
   const archivedRoutineName = resolvedSearchParams?.archived;
   const restoredRoutineName = resolvedSearchParams?.restored;
   const showArchived = resolvedSearchParams?.view === "archived";
+  const showDrafts = resolvedSearchParams?.view === "drafts";
   const { supabase, user } = await getUserOrRedirect();
   let routineRequest = supabase
     .from("workout_routines")
@@ -27,7 +28,9 @@ export default async function RoutinesPage({ searchParams }: PageProps) {
 
   routineRequest = showArchived
     ? routineRequest.not("archived_at", "is", null)
-    : routineRequest.is("archived_at", null);
+    : showDrafts
+      ? routineRequest.is("archived_at", null).eq("status", "draft")
+      : routineRequest.is("archived_at", null).eq("status", "published");
 
   const { data: routines, error } = await routineRequest.order("created_at", {
     ascending: false
@@ -42,6 +45,8 @@ export default async function RoutinesPage({ searchParams }: PageProps) {
         description={
           showArchived
             ? "Review and restore archived workout templates."
+            : showDrafts
+              ? "Resume unfinished routines. Drafts save automatically and cannot be assigned."
             : "Create reusable workout templates and assign them to clients."
         }
         action={<LinkButton href="/dashboard/routines/new">New routine</LinkButton>}
@@ -49,9 +54,15 @@ export default async function RoutinesPage({ searchParams }: PageProps) {
       <div className="mb-4 flex flex-wrap gap-2" aria-label="Routine views">
         <LinkButton
           href="/dashboard/routines"
-          variant={showArchived ? "ghost" : "secondary"}
+          variant={showArchived || showDrafts ? "ghost" : "secondary"}
         >
           Active routines
+        </LinkButton>
+        <LinkButton
+          href="/dashboard/routines?view=drafts"
+          variant={showDrafts ? "secondary" : "ghost"}
+        >
+          Drafts
         </LinkButton>
         <LinkButton
           href="/dashboard/routines?view=archived"
@@ -78,6 +89,11 @@ export default async function RoutinesPage({ searchParams }: PageProps) {
                   href={`/dashboard/routines/${routine.id}`}
                 >
                   <span>{routine.name}</span>
+                  {routine.status === "draft" ? (
+                    <span className="rounded-full bg-warning/10 px-2 py-0.5 text-xs font-medium text-warning">
+                      Draft
+                    </span>
+                  ) : null}
                 </Link>
               </Td>
               <Td>
@@ -94,7 +110,11 @@ export default async function RoutinesPage({ searchParams }: PageProps) {
           {!routines?.length ? (
             <tr>
               <Td colSpan={4}>
-                {showArchived ? "No archived routines." : "No active routines yet."}
+                {showArchived
+                  ? "No archived routines."
+                  : showDrafts
+                    ? "No routine drafts."
+                    : "No active routines yet."}
               </Td>
             </tr>
           ) : null}

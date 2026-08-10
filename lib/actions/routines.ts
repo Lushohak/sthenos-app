@@ -44,6 +44,7 @@ export async function createRoutineAction(formData: FormData) {
       name: String(formData.get("name") ?? "").trim(),
       description: optionalString(formData, "description"),
       routine_type: routineType,
+      status: "draft",
       default_cycles:
         routineType === "gym" ? 1 : numberWithDefault(formData, "default_cycles", 3)
     })
@@ -52,8 +53,36 @@ export async function createRoutineAction(formData: FormData) {
 
   if (error) throw new Error(error.message);
 
+  const requestedExerciseIds = String(formData.get("exercise_ids") ?? "")
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean)
+    .slice(0, 25);
+  if (requestedExerciseIds.length) {
+    const { data: ownedExercises } = await supabase
+      .from("exercises")
+      .select("id")
+      .eq("coach_id", user.id)
+      .is("archived_at", null)
+      .in("id", requestedExerciseIds);
+    const ownedIds = new Set((ownedExercises ?? []).map((exercise) => exercise.id));
+    const orderedIds = requestedExerciseIds.filter((id) => ownedIds.has(id));
+    if (orderedIds.length) {
+      const { error: addError } = await supabase.from("routine_exercises").insert(
+        orderedIds.map((exerciseId, index) => ({
+          routine_id: data.id,
+          exercise_id: exerciseId,
+          position: index + 1,
+          sets: routineType === "gym" ? 3 : 1,
+          reps: "10"
+        }))
+      );
+      if (addError) throw new Error(addError.message);
+    }
+  }
+
   revalidatePath("/dashboard/routines");
-  redirect(`/dashboard/routines/${data.id}`);
+  redirect(`/dashboard/routines/${data.id}?step=exercises`);
 }
 
 export async function addRoutineExerciseAction(routineId: string, formData: FormData) {
@@ -131,6 +160,7 @@ export async function bulkAssignRoutineAction(
     .select("id")
     .eq("id", routineId)
     .eq("coach_id", user.id)
+    .eq("status", "published")
     .is("archived_at", null)
     .single();
 
@@ -300,6 +330,7 @@ export async function archiveRoutineAction(
     .update({ archived_at: new Date().toISOString() })
     .eq("id", routineId)
     .eq("coach_id", user.id)
+    .eq("status", "published")
     .is("archived_at", null)
     .select("id")
     .maybeSingle();

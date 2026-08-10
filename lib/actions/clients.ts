@@ -439,6 +439,7 @@ export async function assignRoutineAction(
     .select("id, name")
     .in("id", routineIds)
     .eq("coach_id", user.id)
+    .eq("status", "published")
     .is("archived_at", null);
 
   if (routineError || !routines || routines.length !== routineIds.length) {
@@ -590,6 +591,7 @@ export async function updateRoutineAssignmentsStatusAction(
       .from("workout_routines")
       .select("id")
       .eq("coach_id", user.id)
+      .eq("status", "published")
       .is("archived_at", null)
       .in("id", routineIds);
 

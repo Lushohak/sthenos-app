@@ -85,6 +85,7 @@ export default async function ClientProfilePage({ params, searchParams }: PagePr
       .from("workout_routines")
       .select("*")
       .eq("coach_id", user.id)
+      .eq("status", "published")
       .is("archived_at", null)
       .order("name"),
     supabase

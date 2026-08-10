@@ -48,21 +48,17 @@ test("@smoke a coach can build a gym workout with per-exercise sets", async ({
     page.getByText("Gym workouts use sets and reps")
   ).toBeVisible();
   await expect(page.getByLabel("Default cycles")).not.toBeVisible();
-  await page.getByRole("button", { name: "Create routine" }).click();
+  await page.getByRole("button", { name: "Start building" }).click();
 
   await expect(page.getByRole("heading", { name: routineName })).toBeVisible();
-  await expect(page.getByText("Gym workout", { exact: true }).first()).toBeVisible();
-  await page.getByLabel("Search exercises").fill(exerciseName);
-  await page.getByText(exerciseName, { exact: true }).click();
+  await page.getByLabel("Search exercise library").fill(exerciseName);
+  await page.getByRole("checkbox", { name: new RegExp(exerciseName) }).check();
+  await page.getByRole("button", { name: "Add 1 to routine" }).click();
+  await page.getByRole("button", { name: "Configure 1 exercises" }).click();
   await page.getByLabel("Sets").fill("3");
   await page.getByLabel("Reps").fill("8");
-  await page.getByLabel("Rest sec").fill("0");
-  await page
-    .getByRole("button", { name: "Add exercise to routine" })
-    .click();
-  await expect(
-    page.getByRole("cell", { name: new RegExp(exerciseName) }).first()
-  ).toBeVisible();
+  await page.getByLabel("Rest seconds").fill("0");
+  await expect(page.getByText("Saved").last()).toBeVisible();
 
   const { data: routine, error: routineError } = await admin
     .from("workout_routines")
@@ -84,14 +80,15 @@ test("@smoke a coach can build a gym workout with per-exercise sets", async ({
   expect(configuredExerciseError, configuredExerciseError?.message).toBeNull();
   expect(configuredExercise).toEqual(expect.objectContaining({ sets: 3, reps: "8" }));
 
-  await page.getByRole("link", { name: "Assign trainees" }).click();
+  await page.getByRole("button", { name: "Review routine" }).click();
+  await page.getByRole("button", { name: "Publish and continue" }).click();
   await page
     .getByRole("checkbox", { name: new RegExp(clientName) })
     .check();
   await page
     .getByRole("button", { name: "Assign routine to 1 trainee" })
     .click();
-  await expect(page.getByText("Routine assigned")).toBeVisible();
+  await expect(page.getByText("Routine assigned", { exact: true })).toBeVisible();
 
   const traineeContext = await browser.newContext();
   const traineePage = await traineeContext.newPage();

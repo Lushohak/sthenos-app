@@ -95,6 +95,7 @@ export type Database = {
           updated_at: string;
         };
         Insert: {
+          id?: string;
           coach_id: string;
           name: string;
           category?: string | null;
@@ -124,6 +125,7 @@ export type Database = {
           name: string;
           description: string | null;
           routine_type: "circuit" | "individual" | "gym";
+          status: "draft" | "published";
           default_cycles: number;
           archived_at: string | null;
           created_at: string;
@@ -134,6 +136,7 @@ export type Database = {
           name: string;
           description?: string | null;
           routine_type?: "circuit" | "individual" | "gym";
+          status?: "draft" | "published";
           default_cycles?: number;
           archived_at?: string | null;
         };
@@ -477,6 +480,17 @@ export type Database = {
         };
         Returns: string;
       };
+      bulk_create_and_add_routine_exercises: {
+        Args: {
+          target_routine_id: string;
+          exercise_items: Json;
+        };
+        Returns: {
+          exercise_id: string;
+          routine_exercise_id: string;
+          reused: boolean;
+        }[];
+      };
     };
     Enums: {
       client_status: "active" | "paused" | "archived";
@@ -490,6 +504,7 @@ export type Database = {
         | "calories_burned"
         | "perceived_intensity";
       activity_assignment_mode: "repeatable" | "one_time";
+      routine_lifecycle_status: "draft" | "published";
     };
     CompositeTypes: {};
   };

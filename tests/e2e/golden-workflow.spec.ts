@@ -55,24 +55,25 @@ test("@smoke coach assignment becomes a trainee workout and coach history", asyn
   await page.getByLabel("Description").fill("A complete automated workout");
   await page.getByLabel("Routine structure").selectOption("circuit");
   await page.getByLabel("Default cycles").fill("2");
-  await page.getByRole("button", { name: "Create routine" }).click();
+  await page.getByRole("button", { name: "Start building" }).click();
   await expect(page.getByRole("heading", { name: routineName })).toBeVisible();
 
-  await page.getByLabel("Search exercises").fill(exerciseName);
-  await page.getByText(exerciseName, { exact: true }).click();
-  await expect(page.getByRole("radio")).toBeChecked();
+  await page.getByLabel("Search exercise library").fill(exerciseName);
+  await page.getByRole("checkbox", { name: new RegExp(exerciseName) }).check();
+  await page.getByRole("button", { name: "Add 1 to routine" }).click();
+  await page.getByRole("button", { name: "Configure 1 exercises" }).click();
   await page.getByLabel("Reps").fill("8");
-  await page.getByLabel("Rest sec").fill("1");
-  await page.getByLabel("Notes").fill("Controlled tempo");
-  await page.getByRole("button", { name: "Add exercise to routine" }).click();
-  await expect(page.getByText(exerciseName).first()).toBeVisible();
+  await page.getByLabel("Rest seconds").fill("1");
+  await page.getByLabel("Instructions").fill("Controlled tempo");
+  await expect(page.getByText("Saved").last()).toBeVisible();
+  await page.getByRole("button", { name: "Review routine" }).click();
+  await page.getByRole("button", { name: "Publish and continue" }).click();
 
-  await page.getByRole("link", { name: "Assign trainees" }).click();
   await page.getByRole("checkbox", { name: new RegExp(traineeName) }).check();
   await page
     .getByRole("button", { name: "Assign routine to 1 trainee" })
     .click();
-  await expect(page.getByText("Routine assigned")).toBeVisible();
+  await expect(page.getByText("Routine assigned", { exact: true })).toBeVisible();
 
   const traineeContext = await browser.newContext();
   const traineePage = await traineeContext.newPage();

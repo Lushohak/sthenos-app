@@ -21,6 +21,7 @@ export default async function BulkAssignRoutinePage({ params }: PageProps) {
       .select("id, name, description")
       .eq("id", routineId)
       .eq("coach_id", user.id)
+      .eq("status", "published")
       .is("archived_at", null)
       .single(),
     supabase

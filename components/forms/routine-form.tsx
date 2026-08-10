@@ -5,13 +5,16 @@ import { createRoutineAction } from "@/lib/actions/routines";
 import { Field, Input, Select, Textarea } from "@/components/ui/field";
 import { SubmitButton } from "@/components/ui/submit-button";
 
-export function RoutineForm() {
+export function RoutineForm({ exerciseIds = [] }: { exerciseIds?: string[] }) {
   const [routineType, setRoutineType] = useState<
     "circuit" | "individual" | "gym"
   >("circuit");
 
   return (
     <form action={createRoutineAction} className="grid max-w-2xl gap-4">
+      {exerciseIds.length ? (
+        <input type="hidden" name="exercise_ids" value={exerciseIds.join(",")} />
+      ) : null}
       <Field label="Routine name">
         <Input
           name="name"
@@ -69,9 +72,9 @@ export function RoutineForm() {
       </div>
       <SubmitButton
         className="w-fit"
-        pendingLabel="Creating routine..."
+        pendingLabel="Starting routine draft..."
       >
-        Create routine
+        Start building
       </SubmitButton>
     </form>
   );
