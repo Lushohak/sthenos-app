@@ -113,6 +113,23 @@ opens its real Supabase action link, and completes the trainee setup flow.
   coach's shared client history.
 - An unrelated trainee cannot read or add body-progress entries for that client.
 
+### Client demographics
+
+- Coaches can create and edit optional gender, date of birth, and metric height.
+- Client profiles derive the current age from the saved birthday.
+- Future birthdays and out-of-range heights are rejected by the database.
+
+### Progress analytics
+
+- Coach roster analytics combine Workouts and Activities while keeping unique
+  training-day counts separate from total sessions.
+- Follow-up signals respect 7-day training, 30-day body-progress, and new-client
+  grace periods without exposing another coach's clients.
+- Date presets are keyboard accessible and preserve the selected range in the
+  URL.
+- Trainee charts render at a mobile viewport with selectable body metrics and
+  Activity actual-versus-target results.
+
 ### Peers and weekly streaks
 
 - Historical Workout and Activity logs combine into Monday–Sunday consistency
@@ -133,11 +150,13 @@ tests/e2e/
 ├── archiving.spec.ts
 ├── auth.spec.ts
 ├── client-deletion.spec.ts
+├── client-demographics.spec.ts
 ├── golden-workflow.spec.ts
 ├── gym-routine.spec.ts
 ├── invitations.spec.ts
 ├── multi-routine-assignment.spec.ts
 ├── peers.spec.ts
+├── progress-analytics.spec.ts
 ├── trainee-progress.spec.ts
 ├── workout-shortcuts.spec.ts
 └── support/

@@ -65,7 +65,6 @@ export async function completeTraineeSetupAction(formData: FormData) {
     .from("clients")
     .update({
       name: fullName,
-      age: optionalNumber(formData, "age"),
       goal: optionalString(formData, "goal"),
       invitation_accepted_at: new Date().toISOString()
     })

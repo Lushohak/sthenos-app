@@ -14,8 +14,15 @@ import { ManageRoutineAssignments } from "@/components/clients/manage-routine-as
 import { ManageActivityAssignments } from "@/components/activities/manage-activity-assignments";
 import { ActivityCompletedToast } from "@/components/activities/activity-completed-toast";
 import { ActivityActions } from "@/components/trainee/activity-actions";
+import {
+  ActivityResultsChart,
+  BodyProgressChart,
+  TrainingTrendChart
+} from "@/components/progress/analytics-charts";
+import { ProgressRangeSelector } from "@/components/progress/progress-range-selector";
 import { Table, Td, Th } from "@/components/ui/table";
 import { getUserOrRedirect } from "@/lib/auth";
+import { calculateAge, formatClientGender } from "@/lib/client-profile";
 import { formatDate } from "@/lib/utils";
 import {
   ACTIVITY_METRIC_KEYS,
@@ -24,10 +31,24 @@ import {
   parseActivityTargets,
   summarizeActivityLogs
 } from "@/lib/activities";
+import {
+  createTrainingBuckets,
+  filterActivityMetricPoints,
+  filterBodyProgressPoints,
+  parseProgressRange,
+  progressRangeLabel,
+  type ActivityMetricPoint,
+  type BodyProgressPoint,
+  type TrainingLogPoint
+} from "@/lib/progress-analytics";
 
 type PageProps = {
   params: Promise<{ clientId: string }>;
-  searchParams?: Promise<{ invite?: string; activityCompleted?: string }>;
+  searchParams?: Promise<{
+    invite?: string;
+    activityCompleted?: string;
+    range?: string | string[];
+  }>;
 };
 
 export default async function ClientProfilePage({ params, searchParams }: PageProps) {
@@ -35,6 +56,8 @@ export default async function ClientProfilePage({ params, searchParams }: PagePr
   const resolvedSearchParams = await searchParams;
   const inviteStatus = resolvedSearchParams?.invite;
   const activityCompleted = resolvedSearchParams?.activityCompleted;
+  const range = parseProgressRange(resolvedSearchParams?.range, "6m");
+  const rangeLabel = progressRangeLabel(range);
   const { supabase, user } = await getUserOrRedirect();
   const today = new Date().toISOString().slice(0, 10);
   const thirtyDaysAgo = new Date();
@@ -75,8 +98,7 @@ export default async function ClientProfilePage({ params, searchParams }: PagePr
       .select("*, workout_routines(name)")
       .eq("coach_id", user.id)
       .eq("client_id", clientId)
-      .order("trained_on", { ascending: false })
-      .limit(10),
+      .order("trained_on", { ascending: false }),
     supabase
       .from("body_progress_entries")
       .select("*")
@@ -100,8 +122,7 @@ export default async function ClientProfilePage({ params, searchParams }: PagePr
       .select("*, activities(name), client_activities(targets)")
       .eq("coach_id", user.id)
       .eq("client_id", clientId)
-      .order("performed_on", { ascending: false })
-      .limit(20),
+      .order("performed_on", { ascending: false }),
     supabase
       .from("activity_logs")
       .select("duration_minutes, distance_km, elevation_gain_m, calories_burned, perceived_intensity")
@@ -156,6 +177,49 @@ export default async function ClientProfilePage({ params, searchParams }: PagePr
     })
   ].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 10);
   const activityInsights = summarizeActivityLogs(recentActivityLogs ?? []);
+  const trainingLogs: TrainingLogPoint[] = [
+    ...(logs ?? []).map((log) => ({
+      clientId: client.id,
+      date: log.trained_on,
+      type: "workout" as const
+    })),
+    ...(activityLogs ?? []).map((log) => ({
+      clientId: client.id,
+      date: log.performed_on,
+      type: "activity" as const
+    }))
+  ];
+  const trainingBuckets = createTrainingBuckets(trainingLogs, range, today);
+  const bodyPoints = filterBodyProgressPoints(
+    (progress ?? []).map<BodyProgressPoint>((entry) => ({
+      date: entry.recorded_on,
+      body_weight: Number(entry.body_weight),
+      body_fat_percentage: entry.body_fat_percentage === null ? null : Number(entry.body_fat_percentage),
+      muscle_mass_percentage: entry.muscle_mass_percentage === null ? null : Number(entry.muscle_mass_percentage),
+      waist: entry.waist === null ? null : Number(entry.waist),
+      chest: entry.chest === null ? null : Number(entry.chest),
+      arms: entry.arms === null ? null : Number(entry.arms),
+      legs: entry.legs === null ? null : Number(entry.legs)
+    })),
+    range,
+    today
+  );
+  const activityMetricPoints = filterActivityMetricPoints(
+    (activityLogs ?? []).map<ActivityMetricPoint>((log) => {
+      const activity = Array.isArray(log.activities) ? log.activities[0] : log.activities;
+      const assignment = Array.isArray(log.client_activities) ? log.client_activities[0] : log.client_activities;
+      return {
+        id: log.id,
+        activityId: log.activity_id,
+        activityName: activity?.name ?? "Activity",
+        date: log.performed_on,
+        values: activityMetricValuesFromLog(log),
+        targets: parseActivityTargets(assignment?.targets ?? null)
+      };
+    }),
+    range,
+    today
+  );
 
   return (
     <>
@@ -245,7 +309,19 @@ export default async function ClientProfilePage({ params, searchParams }: PagePr
             </div>
             <div>
               <dt className="text-muted-foreground">Age</dt>
-              <dd>{client.age ?? "Not set"}</dd>
+              <dd>{calculateAge(client.date_of_birth, client.age) ?? "Not set"}</dd>
+            </div>
+            <div>
+              <dt className="text-muted-foreground">Date of birth</dt>
+              <dd>{client.date_of_birth ? formatDate(client.date_of_birth) : "Not set"}</dd>
+            </div>
+            <div>
+              <dt className="text-muted-foreground">Gender</dt>
+              <dd>{formatClientGender(client.gender)}</dd>
+            </div>
+            <div>
+              <dt className="text-muted-foreground">Height</dt>
+              <dd>{client.height_cm !== null ? `${client.height_cm} cm` : "Not set"}</dd>
             </div>
             <div>
               <dt className="text-muted-foreground">Status</dt>
@@ -322,6 +398,27 @@ export default async function ClientProfilePage({ params, searchParams }: PagePr
           {activityInsights.elevationGainM ? <StatCard label="Elevation" value={`${activityInsights.elevationGainM.toFixed(0)} m`} /> : null}
           {activityInsights.caloriesBurned ? <StatCard label="Est. calories" value={`${activityInsights.caloriesBurned} kcal`} /> : null}
           {activityInsights.averageIntensity !== null ? <StatCard label="Average intensity" value={`${activityInsights.averageIntensity.toFixed(1)}/10`} /> : null}
+        </div>
+      </section>
+      <section className="mt-8">
+        <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <h2 className="text-lg font-semibold">Progress analytics</h2>
+            <p className="mt-1 text-sm text-muted-foreground">Training and measurement trends · {rangeLabel}</p>
+          </div>
+          <ProgressRangeSelector value={range} />
+        </div>
+        <div className="grid gap-6 xl:grid-cols-2">
+          <TrainingTrendChart
+            buckets={trainingBuckets}
+            variant="days"
+            title="Training consistency"
+            description="Unique training days in each period; session counts remain available in the detailed history."
+          />
+          <BodyProgressChart points={bodyPoints} />
+          <div className="xl:col-span-2">
+            <ActivityResultsChart points={activityMetricPoints} />
+          </div>
         </div>
       </section>
       <section className="mt-8 grid gap-6 xl:grid-cols-2">

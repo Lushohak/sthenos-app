@@ -2,6 +2,12 @@ import { Activity, Scale } from "lucide-react";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { BodyProgressForm } from "@/components/forms/body-progress-form";
+import {
+  ActivityResultsChart,
+  BodyProgressChart,
+  TrainingTrendChart
+} from "@/components/progress/analytics-charts";
+import { ProgressRangeSelector } from "@/components/progress/progress-range-selector";
 import { Table, Td, Th } from "@/components/ui/table";
 import {
   ACTIVITY_METRIC_KEYS,
@@ -11,10 +17,27 @@ import {
   summarizeActivityLogs
 } from "@/lib/activities";
 import { getTraineeOrRedirect } from "@/lib/trainee";
+import {
+  createTrainingBuckets,
+  filterActivityMetricPoints,
+  filterBodyProgressPoints,
+  parseProgressRange,
+  progressRangeLabel,
+  type ActivityMetricPoint,
+  type BodyProgressPoint,
+  type TrainingLogPoint
+} from "@/lib/progress-analytics";
 import { formatDate } from "@/lib/utils";
 
-export default async function TraineeProgressPage() {
+type PageProps = {
+  searchParams?: Promise<{ range?: string | string[] }>;
+};
+
+export default async function TraineeProgressPage({ searchParams }: PageProps) {
   const { supabase, client } = await getTraineeOrRedirect();
+  const params = await searchParams;
+  const range = parseProgressRange(params?.range, "6m");
+  const rangeLabel = progressRangeLabel(range);
   const today = new Date().toISOString().slice(0, 10);
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
@@ -30,9 +53,9 @@ export default async function TraineeProgressPage() {
   ] = await Promise.all([
     supabase.from("workout_logs").select("id", { count: "exact", head: true }).eq("client_id", client.id),
     supabase.from("workout_logs").select("id", { count: "exact", head: true }).eq("client_id", client.id).gte("trained_on", since),
-    supabase.from("workout_logs").select("id, trained_on, created_at, notes, duration_minutes, workout_routines(name)").eq("client_id", client.id).order("trained_on", { ascending: false }).limit(20),
+    supabase.from("workout_logs").select("id, trained_on, created_at, notes, duration_minutes, workout_routines(name)").eq("client_id", client.id).order("trained_on", { ascending: false }),
     supabase.from("activity_logs").select("id", { count: "exact", head: true }).eq("client_id", client.id),
-    supabase.from("activity_logs").select("id, performed_on, created_at, notes, duration_minutes, distance_km, elevation_gain_m, calories_burned, perceived_intensity, activities(name), client_activities(targets)").eq("client_id", client.id).order("performed_on", { ascending: false }).limit(30),
+    supabase.from("activity_logs").select("id, activity_id, performed_on, created_at, notes, duration_minutes, distance_km, elevation_gain_m, calories_burned, perceived_intensity, activities(name), client_activities(targets)").eq("client_id", client.id).order("performed_on", { ascending: false }),
     supabase.from("activity_logs").select("duration_minutes, distance_km, elevation_gain_m, calories_burned, perceived_intensity").eq("client_id", client.id).gte("performed_on", since),
     supabase.from("body_progress_entries").select("*").eq("client_id", client.id).order("recorded_on", { ascending: false })
   ]);
@@ -56,6 +79,41 @@ export default async function TraineeProgressPage() {
       return { id: log.id, type: "Activity", date: log.performed_on, createdAt: log.created_at, name: activity?.name ?? "Activity", notes: log.notes, results: ACTIVITY_METRIC_KEYS.flatMap((key) => values[key] === undefined ? [] : [formatActivityMetricResult(key, values[key]!, targets)]).join(" · ") || "Completed" };
     })
   ].sort((a, b) => `${b.date}-${b.createdAt}`.localeCompare(`${a.date}-${a.createdAt}`)).slice(0, 30);
+  const trainingLogs: TrainingLogPoint[] = [
+    ...(workoutLogs ?? []).map((log) => ({ clientId: client.id, date: log.trained_on, type: "workout" as const })),
+    ...(activityLogs ?? []).map((log) => ({ clientId: client.id, date: log.performed_on, type: "activity" as const }))
+  ];
+  const trainingBuckets = createTrainingBuckets(trainingLogs, range, today);
+  const bodyPoints = filterBodyProgressPoints(
+    (progress ?? []).map<BodyProgressPoint>((entry) => ({
+      date: entry.recorded_on,
+      body_weight: Number(entry.body_weight),
+      body_fat_percentage: entry.body_fat_percentage === null ? null : Number(entry.body_fat_percentage),
+      muscle_mass_percentage: entry.muscle_mass_percentage === null ? null : Number(entry.muscle_mass_percentage),
+      waist: entry.waist === null ? null : Number(entry.waist),
+      chest: entry.chest === null ? null : Number(entry.chest),
+      arms: entry.arms === null ? null : Number(entry.arms),
+      legs: entry.legs === null ? null : Number(entry.legs)
+    })),
+    range,
+    today
+  );
+  const activityMetricPoints = filterActivityMetricPoints(
+    (activityLogs ?? []).map<ActivityMetricPoint>((log) => {
+      const activity = Array.isArray(log.activities) ? log.activities[0] : log.activities;
+      const assignment = Array.isArray(log.client_activities) ? log.client_activities[0] : log.client_activities;
+      return {
+        id: log.id,
+        activityId: log.activity_id,
+        activityName: activity?.name ?? "Activity",
+        date: log.performed_on,
+        values: activityMetricValuesFromLog(log),
+        targets: parseActivityTargets(assignment?.targets ?? null)
+      };
+    }),
+    range,
+    today
+  );
 
   return (
     <>
@@ -65,6 +123,28 @@ export default async function TraineeProgressPage() {
         <StatCard label="Last 30 days" value={(recentWorkoutCount ?? 0) + recentActivityCount} detail="Completed training" />
         <StatCard label="Latest weight" value={latestProgress ? `${latestProgress.body_weight} kg` : "No data"} detail={latestProgress ? formatDate(latestProgress.recorded_on) : "No measurements yet"} />
         <StatCard label="Weight change" value={weightChange === null ? "Not enough data" : `${weightChange > 0 ? "+" : ""}${weightChange.toFixed(1)} kg`} detail={firstProgress ? `Since ${formatDate(firstProgress.recorded_on)}` : "From your first entry"} />
+      </section>
+
+      <section className="mt-8">
+        <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <h2 className="text-lg font-semibold">Your trends</h2>
+            <p className="mt-1 text-sm text-muted-foreground">Training and measurement patterns · {rangeLabel}</p>
+          </div>
+          <ProgressRangeSelector value={range} />
+        </div>
+        <div className="grid gap-6 xl:grid-cols-2">
+          <TrainingTrendChart
+            buckets={trainingBuckets}
+            variant="days"
+            title="Training consistency"
+            description="Each bar counts unique days with a completed Workout or Activity."
+          />
+          <BodyProgressChart points={bodyPoints} />
+          <div className="xl:col-span-2">
+            <ActivityResultsChart points={activityMetricPoints} />
+          </div>
+        </div>
       </section>
 
       <section className="mt-8" id="log-progress">

@@ -19,7 +19,6 @@ test("@smoke coach assignment becomes a trainee workout and coach history", asyn
   await page.goto("/dashboard/clients/new");
   await page.getByLabel("Name").fill(traineeName);
   await page.getByLabel("Email").fill(trainee.email);
-  await page.getByLabel("Age").fill("28");
   await page.getByLabel("Goal").fill("Complete the E2E workout");
   await page.getByRole("button", { name: "Create client" }).click();
   await expect(page).toHaveURL(/\/dashboard\/clients$/);

@@ -3,7 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getUserOrRedirect } from "@/lib/auth";
+import { calculateAge } from "@/lib/client-profile";
 import { createAdminClient } from "@/lib/supabase/admin";
+import type { Database } from "@/types/database";
 
 export type DeleteClientAccountResult =
   | { success: true; clientName: string }
@@ -35,6 +37,45 @@ function optionalNumber(formData: FormData, key: string) {
   return value.length > 0 ? Number(value) : null;
 }
 
+type ClientGender = Database["public"]["Enums"]["client_gender"];
+
+function optionalClientGender(formData: FormData): ClientGender | null {
+  const value = optionalString(formData, "gender");
+  if (value === null) return null;
+  if (value === "male" || value === "female" || value === "prefer_not_to_say") {
+    return value;
+  }
+  throw new Error("Choose a valid gender option.");
+}
+
+function optionalDateOfBirth(formData: FormData) {
+  const value = optionalString(formData, "date_of_birth");
+  if (value === null) return null;
+  const parsed = new Date(`${value}T00:00:00Z`);
+  const today = new Date().toISOString().slice(0, 10);
+  const age = calculateAge(value);
+  if (
+    !/^\d{4}-\d{2}-\d{2}$/.test(value)
+    || Number.isNaN(parsed.valueOf())
+    || parsed.toISOString().slice(0, 10) !== value
+    || value > today
+    || age === null
+    || age > 120
+  ) {
+    throw new Error("Choose a valid date of birth for a trainee aged 120 or younger.");
+  }
+  return value;
+}
+
+function optionalHeightCm(formData: FormData) {
+  const value = optionalNumber(formData, "height_cm");
+  if (value === null) return null;
+  if (!Number.isFinite(value) || value < 30 || value > 300) {
+    throw new Error("Height must be between 30 and 300 centimeters.");
+  }
+  return value;
+}
+
 export type AssignRoutineState = {
   status: "idle" | "success" | "error";
   message: string;
@@ -56,7 +97,9 @@ export async function createClientAction(formData: FormData) {
     coach_id: user.id,
     name: String(formData.get("name") ?? "").trim(),
     email: optionalString(formData, "email"),
-    age: optionalNumber(formData, "age"),
+    gender: optionalClientGender(formData),
+    date_of_birth: optionalDateOfBirth(formData),
+    height_cm: optionalHeightCm(formData),
     goal: optionalString(formData, "goal"),
     notes: optionalString(formData, "notes"),
     status: String(formData.get("status") ?? "active") as "active" | "paused" | "archived"
@@ -76,7 +119,9 @@ export async function updateClientAction(clientId: string, formData: FormData) {
     .update({
       name: String(formData.get("name") ?? "").trim(),
       email: optionalString(formData, "email"),
-      age: optionalNumber(formData, "age"),
+      gender: optionalClientGender(formData),
+      date_of_birth: optionalDateOfBirth(formData),
+      height_cm: optionalHeightCm(formData),
       goal: optionalString(formData, "goal"),
       notes: optionalString(formData, "notes"),
       status: String(formData.get("status") ?? "active") as "active" | "paused" | "archived"

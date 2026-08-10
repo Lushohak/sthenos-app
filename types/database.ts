@@ -39,6 +39,9 @@ export type Database = {
           name: string;
           email: string | null;
           age: number | null;
+          gender: Database["public"]["Enums"]["client_gender"] | null;
+          date_of_birth: string | null;
+          height_cm: number | null;
           goal: string | null;
           notes: string | null;
           status: "active" | "paused" | "archived";
@@ -54,6 +57,9 @@ export type Database = {
           name: string;
           email?: string | null;
           age?: number | null;
+          gender?: Database["public"]["Enums"]["client_gender"] | null;
+          date_of_birth?: string | null;
+          height_cm?: number | null;
           goal?: string | null;
           notes?: string | null;
           status?: "active" | "paused" | "archived";
@@ -474,6 +480,7 @@ export type Database = {
     };
     Enums: {
       client_status: "active" | "paused" | "archived";
+      client_gender: "male" | "female" | "prefer_not_to_say";
       assignment_status: "active" | "completed" | "paused";
       account_role: "coach" | "trainee";
       activity_metric:

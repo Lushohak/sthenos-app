@@ -1,6 +1,6 @@
 # Sthenos feature inventory
 
-Last reviewed: August 6, 2026
+Last reviewed: August 7, 2026
 
 This document describes functionality currently present in Sthenos. A
 **Routine** is an exercise-based workout. An **Activity** is a separately
@@ -23,6 +23,8 @@ limit trainees to their linked profile, assignments, and logs.
 - [x] View total clients and clients who completed a Workout or Activity during
   the last seven days.
 - [x] Create, edit, archive, restore, and permanently delete trainee accounts.
+- [x] Record optional gender, date of birth, and height while creating or
+  editing a trainee, with age calculated automatically from the birthday.
 - [x] Invite trainees by email and resend password setup links.
 - [x] Show friendly invitation errors and request loading states.
 - [x] Record body measurements and completed exercise-based workouts on behalf
@@ -94,9 +96,16 @@ schedule, or Activity PDF download.
   and average-intensity summaries only when relevant data exists.
 - [x] Show actual-versus-target values in Activity history.
 - [x] Include a per-trainee Activity summary in coach progress reporting.
+- [x] Filter coach analytics with 30-day, 12-week, 6-month, 1-year, and
+  all-time presets.
+- [x] Review roster Workout/Activity trends, unique training days, and neutral
+  follow-up signals for inactive training or body-progress history.
+- [x] Review individual training consistency, selectable body-measurement
+  trends, and Activity actual-versus-target charts from each trainee profile.
 
-Current boundary: progress is table- and summary-based; charts, date filters,
-exports, and generated reports are not yet available.
+Current boundary: analytics describe recorded activity rather than prescribed
+adherence because Routines do not yet define an expected weekly frequency.
+Exports and generated reports are not yet available.
 
 ## Trainee functionality
 
@@ -153,6 +162,8 @@ personal records.
 - [x] Review unified Workout and Activity counts and chronological history.
 - [x] Review relevant 30-day Activity metric totals and averages.
 - [x] Review latest weight, weight change, and body measurements.
+- [x] Filter personal analytics by date range and review training consistency,
+  selectable body-measurement trends, and Activity results against targets.
 - [x] Log weight, body-fat percentage, muscle-mass percentage, circumferences,
   and notes directly into the progress history shared with their coach.
 
@@ -170,7 +181,8 @@ deletion, or a coach approval workflow.
 - [x] Separate exercise, Routine, Activity, assignment, and log storage.
 - [x] Local Playwright coverage for authorization, invitations, deletion,
   archiving, Routine variants and assignments, workout shortcuts, Activity
-  customization, Activity logging, and Activity assignment lifecycle.
+  customization, Activity logging, Activity assignment lifecycle, and progress
+  analytics.
 
 ## Development opportunities
 
@@ -193,7 +205,7 @@ deletion, or a coach approval workflow.
 
 ### Progress and reporting
 
-- [ ] Add charts, comparisons, date filters, and CSV/PDF exports.
+- [ ] Add CSV/PDF progress exports and generated reports.
 - [ ] Add detailed completed-session views.
 - [ ] Add optional progress photos and richer check-ins for coach review.
 

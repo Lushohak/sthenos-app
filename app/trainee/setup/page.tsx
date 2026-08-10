@@ -26,14 +26,9 @@ export default async function TraineeSetupPage({ searchParams }: PageProps) {
         <Field label="Name">
           <Input name="name" defaultValue={client.name} required />
         </Field>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Age">
-            <Input name="age" type="number" min={1} max={120} defaultValue={client.age ?? ""} />
-          </Field>
-          <Field label="Goal">
-            <Input name="goal" defaultValue={client.goal ?? ""} />
-          </Field>
-        </div>
+        <Field label="Goal">
+          <Input name="goal" defaultValue={client.goal ?? ""} />
+        </Field>
         <Field label="Password" hint="Use at least 6 characters.">
           <Input name="password" type="password" autoComplete="new-password" minLength={6} required />
         </Field>

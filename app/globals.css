@@ -26,6 +26,11 @@
   --destructive: 251 113 133;
   --warning: 245 158 11;
   --info: 96 165 250;
+  --chart-workout: var(--primary);
+  --chart-activity: var(--info);
+  --chart-consistency: var(--success);
+  --chart-target: var(--secondary-hover);
+  --chart-grid: var(--border);
   --shadow: 0 0 0;
 }
 
