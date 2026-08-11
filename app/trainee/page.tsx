@@ -31,6 +31,15 @@ type PageProps = {
   searchParams?: Promise<{ activityCompleted?: string }>;
 };
 
+const routinePhases = [
+  { id: "warmup", label: "Warm-up" },
+  { id: "main", label: "Main workout" },
+  { id: "cooldown", label: "Cool-down" }
+] as const;
+function routinePhaseRank(value: unknown) {
+  return value === "warmup" ? 0 : value === "cooldown" ? 2 : 1;
+}
+
 export default async function TraineeDashboardPage({ searchParams }: PageProps) {
   const activityCompleted = (await searchParams)?.activityCompleted;
   const { supabase, client } = await getTraineeOrRedirect();
@@ -43,7 +52,7 @@ export default async function TraineeDashboardPage({ searchParams }: PageProps) 
   ] = await Promise.all([
     supabase
       .from("client_routines")
-      .select("id, status, assigned_at, notes, workout_routines(id, name, description, routine_type, default_cycles, routine_exercises(position, sets, reps, rest_seconds, notes, exercises(name, category, difficulty, thumbnail_url, video_url, equipment)))")
+      .select("id, status, assigned_at, notes, workout_routines(id, name, description, warmup_notes, workout_notes, cooldown_notes, routine_type, default_cycles, routine_exercises(position, phase, sets, reps, rest_seconds, notes, exercises(name, category, difficulty, thumbnail_url, video_url, equipment)))")
       .eq("client_id", client.id)
       .eq("status", "active")
       .order("assigned_at", { ascending: false }),
@@ -174,17 +183,22 @@ export default async function TraineeDashboardPage({ searchParams }: PageProps) 
         <div className="grid gap-5">
           {(routineAssignments ?? []).map((assignment) => {
             const routine = Array.isArray(assignment.workout_routines) ? assignment.workout_routines[0] : assignment.workout_routines;
-            const exercises = [...(routine?.routine_exercises ?? [])].sort((a, b) => a.position - b.position);
+            const exercises = [...(routine?.routine_exercises ?? [])].sort(
+              (a, b) => routinePhaseRank(a.phase) - routinePhaseRank(b.phase) || a.position - b.position
+            );
             const pdfRoutine: RoutinePdfData | undefined = routine ? {
               traineeName: client.name,
               routineName: routine.name,
               routineDescription: routine.description,
+              warmupNotes: routine.warmup_notes,
+              workoutNotes: routine.workout_notes,
+              cooldownNotes: routine.cooldown_notes,
               assignmentNotes: assignment.notes,
               routineType: routine.routine_type,
               defaultCycles: routine.default_cycles,
               exercises: exercises.flatMap((item) => {
                 const exercise = Array.isArray(item.exercises) ? item.exercises[0] : item.exercises;
-                return exercise ? [{ name: exercise.name, category: exercise.category, equipment: exercise.equipment, thumbnailUrl: exercise.thumbnail_url, sets: item.sets, reps: item.reps, restSeconds: item.rest_seconds, notes: item.notes }] : [];
+                return exercise ? [{ name: exercise.name, category: exercise.category, equipment: exercise.equipment, thumbnailUrl: exercise.thumbnail_url, phase: item.phase, sets: item.sets, reps: item.reps, restSeconds: item.rest_seconds, notes: item.notes }] : [];
               })
             } : undefined;
 
@@ -206,29 +220,40 @@ export default async function TraineeDashboardPage({ searchParams }: PageProps) 
                 <WorkoutRoutineActions assignmentId={assignment.id} canBegin={Boolean(routine) && exercises.length > 0} pdfRoutine={pdfRoutine}>
                   <div className="p-4 sm:p-5">
                     <h4 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">Workout plan</h4>
-                    <ol className="grid gap-3">
-                      {exercises.map((item, index) => {
-                        const exercise = Array.isArray(item.exercises) ? item.exercises[0] : item.exercises;
+                    <div className="grid gap-5">
+                      {routinePhases.map((phase) => {
+                        const phaseExercises = exercises.filter((item) => item.phase === phase.id);
+                        const guidance = phase.id === "warmup" ? routine?.warmup_notes : phase.id === "main" ? routine?.workout_notes : routine?.cooldown_notes;
+                        if (!phaseExercises.length && !guidance) return null;
                         return (
-                          <li key={`${assignment.id}-${item.position}`} className="grid gap-3 rounded-lg border p-3 sm:grid-cols-[2rem_6rem_minmax(0,1fr)_auto] sm:items-center sm:gap-4">
-                            <span className="hidden h-8 w-8 items-center justify-center rounded-full bg-muted text-sm font-semibold text-muted-foreground sm:flex">{index + 1}</span>
-                            <ExerciseThumb src={exercise?.thumbnail_url} alt={exercise?.name ?? "Exercise"} className="h-36 w-full sm:h-16 sm:w-24" />
-                            <div className="min-w-0">
-                              <p className="font-medium">{exercise?.name ?? "Exercise"}</p>
-                              <p className="mt-1 text-xs text-muted-foreground">{[exercise?.category, exercise?.equipment].filter(Boolean).join(" · ") || "No equipment details"}</p>
-                              {item.notes ? <p className="mt-2 text-sm text-muted-foreground">{item.notes}</p> : null}
+                          <section key={phase.id} className="grid gap-3" aria-labelledby={`${assignment.id}-${phase.id}`}>
+                            <div>
+                              <h5 id={`${assignment.id}-${phase.id}`} className="font-semibold">{phase.label}</h5>
+                              {guidance ? <p className="mt-1 text-sm text-muted-foreground">{guidance}</p> : null}
                             </div>
-                            <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
-                              {routine?.routine_type === "gym" ? <div className="rounded-md bg-muted/60 px-3 py-2 text-center"><p className="text-[0.65rem] font-semibold uppercase text-muted-foreground">Sets</p><p className="text-sm font-semibold">{item.sets}</p></div> : null}
-                              <div className="rounded-md bg-muted/60 px-3 py-2 text-center"><p className="text-[0.65rem] font-semibold uppercase text-muted-foreground">Reps</p><p className="text-sm font-semibold">{item.reps}</p></div>
-                              <div className="rounded-md bg-muted/60 px-3 py-2 text-center"><p className="flex items-center gap-1 text-[0.65rem] font-semibold uppercase text-muted-foreground"><Clock3 className="h-3 w-3" aria-hidden="true" />Rest</p><p className="text-sm font-semibold">{item.rest_seconds ? `${item.rest_seconds}s` : "—"}</p></div>
-                              {exercise?.video_url ? <a className="col-span-2 inline-flex h-10 items-center justify-center gap-2 rounded-md border px-3 text-sm font-medium text-primary hover:bg-muted" href={exercise.video_url} target="_blank" rel="noreferrer"><PlayCircle className="h-4 w-4" aria-hidden="true" />Demo<ExternalLink className="h-3 w-3" aria-hidden="true" /></a> : null}
-                            </div>
-                          </li>
+                            <ol className="grid gap-3">
+                              {phaseExercises.map((item, index) => {
+                                const exercise = Array.isArray(item.exercises) ? item.exercises[0] : item.exercises;
+                                return (
+                                  <li key={`${assignment.id}-${item.position}`} className="grid gap-3 rounded-lg border p-3 sm:grid-cols-[2rem_6rem_minmax(0,1fr)_auto] sm:items-center sm:gap-4">
+                                    <span className="hidden h-8 w-8 items-center justify-center rounded-full bg-muted text-sm font-semibold text-muted-foreground sm:flex">{index + 1}</span>
+                                    <ExerciseThumb src={exercise?.thumbnail_url} alt={exercise?.name ?? "Exercise"} className="h-36 w-full sm:h-16 sm:w-24" />
+                                    <div className="min-w-0"><p className="font-medium">{exercise?.name ?? "Exercise"}</p><p className="mt-1 text-xs text-muted-foreground">{[exercise?.category, exercise?.equipment].filter(Boolean).join(" · ") || "No equipment details"}</p>{item.notes ? <p className="mt-2 text-sm text-muted-foreground">{item.notes}</p> : null}</div>
+                                    <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
+                                      {routine?.routine_type === "gym" && phase.id === "main" ? <div className="rounded-md bg-muted/60 px-3 py-2 text-center"><p className="text-[0.65rem] font-semibold uppercase text-muted-foreground">Sets</p><p className="text-sm font-semibold">{item.sets}</p></div> : null}
+                                      <div className="rounded-md bg-muted/60 px-3 py-2 text-center"><p className="text-[0.65rem] font-semibold uppercase text-muted-foreground">Work</p><p className="text-sm font-semibold">{item.reps}</p></div>
+                                      <div className="rounded-md bg-muted/60 px-3 py-2 text-center"><p className="flex items-center gap-1 text-[0.65rem] font-semibold uppercase text-muted-foreground"><Clock3 className="h-3 w-3" aria-hidden="true" />Rest</p><p className="text-sm font-semibold">{item.rest_seconds ? `${item.rest_seconds}s` : "—"}</p></div>
+                                      {exercise?.video_url ? <a className="col-span-2 inline-flex h-10 items-center justify-center gap-2 rounded-md border px-3 text-sm font-medium text-primary hover:bg-muted" href={exercise.video_url} target="_blank" rel="noreferrer"><PlayCircle className="h-4 w-4" aria-hidden="true" />Demo<ExternalLink className="h-3 w-3" aria-hidden="true" /></a> : null}
+                                    </div>
+                                  </li>
+                                );
+                              })}
+                            </ol>
+                          </section>
                         );
                       })}
-                      {!exercises.length ? <li className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">Your coach has not added exercises to this routine yet.</li> : null}
-                    </ol>
+                      {!exercises.length ? <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">Your coach has not added exercises to this routine yet.</div> : null}
+                    </div>
                   </div>
                 </WorkoutRoutineActions>
               </article>

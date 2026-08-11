@@ -77,6 +77,12 @@ test("@smoke a coach can bulk-create exercises in a persistent routine draft", a
     .getByLabel("Create a separate exercise anyway")
     .nth(1)
     .check();
+  const sharedDefaults = page.getByRole("region", { name: "Shared defaults" });
+  await sharedDefaults.getByLabel("Sets").fill("4");
+  await sharedDefaults.getByLabel("Reps").fill("12");
+  await sharedDefaults.getByLabel("Rest seconds").fill("35");
+  await sharedDefaults.getByRole("button", { name: "Apply to all rows" }).click();
+  await expect(page.getByText("Configuration applied", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Create and add to routine" }).click();
   await expect(page.getByText("Exercises added")).toBeVisible();
   await page.getByRole("button", { name: "Configure 3 exercises" }).click();
@@ -87,12 +93,23 @@ test("@smoke a coach can bulk-create exercises in a persistent routine draft", a
         .evaluate((navigation) => Math.round(navigation.getBoundingClientRect().top))
     )
     .toBeLessThanOrEqual(24);
+  const warmupExerciseCard = page.locator("article").filter({ hasText: newName });
+  await warmupExerciseCard.getByLabel("Workout phase").selectOption("warmup");
+  await expect(
+    page.getByRole("region", { name: "Warm-up" }).getByText(newName, { exact: true })
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Details" }).click();
+  await page
+    .getByLabel("Warm-up guidance")
+    .fill("Walk easily for five minutes before beginning.");
+  await expect(page.getByText("Saving", { exact: true })).toBeVisible();
+  await expect(page.getByText("Saved", { exact: true })).toBeVisible();
 
   const [{ data: routineItems }, { count: duplicateNameCount }] =
     await Promise.all([
       admin
         .from("routine_exercises")
-        .select("exercise_id, position")
+        .select("exercise_id, position, sets, reps, rest_seconds")
         .eq("routine_id", draft!.id)
         .order("position"),
       admin
@@ -103,13 +120,19 @@ test("@smoke a coach can bulk-create exercises in a persistent routine draft", a
     ]);
   expect(routineItems).toHaveLength(3);
   expect(routineItems?.[0].exercise_id).toBe(existingExercise!.id);
+  expect(routineItems?.every((item) => item.reps === "12")).toBe(true);
+  expect(routineItems?.every((item) => item.rest_seconds === 35)).toBe(true);
+  expect(routineItems?.filter((item) => item.sets === 4)).toHaveLength(2);
   expect(duplicateNameCount).toBe(2);
 
   await page.goto("/dashboard/routines?view=drafts");
   await expect(page.getByRole("link", { name: new RegExp(routineName) })).toBeVisible();
   await page.getByRole("link", { name: new RegExp(routineName) }).click();
   await page.getByRole("button", { name: "Configure" }).click();
-  await expect(page.getByText(newName, { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("region", { name: "Warm-up" }).getByText(newName, { exact: true })
+  ).toBeVisible();
+  await expect(page.getByText("Walk easily for five minutes before beginning.")).toBeVisible();
   await page.getByRole("button", { name: "Review routine" }).click();
   await page.getByRole("button", { name: "Publish and continue" }).click();
 

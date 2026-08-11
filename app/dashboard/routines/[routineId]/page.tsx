@@ -137,6 +137,14 @@ export default async function RoutineDetailPage({ params, searchParams }: PagePr
               <p className="mt-1 text-lg font-semibold">{routineExercises?.length ?? 0}</p>
             </div>
           </section>
+          {routine.warmup_notes || routine.workout_notes || routine.cooldown_notes ? (
+            <section className="mb-6 grid gap-3 rounded-xl border bg-card p-4 shadow-soft">
+              <h2 className="font-semibold">Phase guidance</h2>
+              {routine.warmup_notes ? <div><p className="text-sm font-medium">Warm-up</p><p className="mt-1 text-sm text-muted-foreground">{routine.warmup_notes}</p></div> : null}
+              {routine.workout_notes ? <div><p className="text-sm font-medium">Main workout</p><p className="mt-1 text-sm text-muted-foreground">{routine.workout_notes}</p></div> : null}
+              {routine.cooldown_notes ? <div><p className="text-sm font-medium">Cool-down</p><p className="mt-1 text-sm text-muted-foreground">{routine.cooldown_notes}</p></div> : null}
+            </section>
+          ) : null}
           <RoutineExerciseList
             routineId={routine.id}
             routineExercises={routineExercises ?? []}

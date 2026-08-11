@@ -1,6 +1,6 @@
 # Sthenos feature inventory
 
-Last reviewed: August 7, 2026
+Last reviewed: August 10, 2026
 
 This document describes functionality currently present in Sthenos. A
 **Routine** is an exercise-based workout. An **Activity** is a separately
@@ -49,6 +49,10 @@ exercises cannot currently be restored from the coach UI.
 - [x] Configure cycles for circuit/individual Routines and sets plus reps for
   Gym Routines.
 - [x] Search, add, reorder, and remove exercises while composing a Routine.
+- [x] Organize every Routine around a required Main workout with optional
+  Warm-up and Cool-down phases, autosaved guidance, and reusable visual cards.
+- [x] Perform warm-up and cool-down exercises once while retaining cycles and
+  Gym sets for the Main workout.
 - [x] Create a missing exercise without losing the Routine workflow.
 - [x] Assign multiple Routines to one trainee and bulk-assign one Routine to
   several trainees.
@@ -56,6 +60,7 @@ exercises cannot currently be restored from the coach UI.
 - [x] Archive and restore Routine templates while preserving existing
   assignments.
 - [x] Download exercise-based Routines as compact PDFs with uncropped images.
+  PDFs preserve phase order and include phase-specific guidance.
 
 Current boundaries: assignments have no recurrence schedule or due date, and
 Routine prescriptions do not yet snapshot the entire template.
@@ -147,6 +152,8 @@ challenges, direct messaging, or notifications.
 - [x] Preview an assigned Routine without leaving the trainee dashboard.
 - [x] Download a Routine PDF for offline reading.
 - [x] Move or swipe through exercises, rounds, and rest periods.
+- [x] Follow guided phase introductions and transitions from Warm-up through
+  Main workout and Cool-down, including instructions-only phases.
 - [x] View full-size exercise images and external demonstrations.
 - [x] Play a synthesized three-ring rest bell and remember the sound preference.
 - [x] Resume device-local workout progress.

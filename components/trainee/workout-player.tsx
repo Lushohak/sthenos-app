@@ -40,6 +40,7 @@ export type WorkoutPlayerExercise = {
   equipment: string | null;
   thumbnailUrl: string | null;
   videoUrl: string | null;
+  phase: "warmup" | "main" | "cooldown";
   sets: number;
   reps: string;
   restSeconds: number | null;
@@ -51,6 +52,9 @@ type WorkoutPlayerProps = {
   routineId: string;
   routineName: string;
   routineDescription: string | null;
+  warmupNotes: string | null;
+  workoutNotes: string | null;
+  cooldownNotes: string | null;
   assignmentNotes: string | null;
   routineType: "circuit" | "individual" | "gym";
   defaultCycles: number;
@@ -58,12 +62,14 @@ type WorkoutPlayerProps = {
   today: string;
 };
 
-type WorkoutPhase = "exercise" | "rest" | "summary";
+type RoutinePhase = "warmup" | "main" | "cooldown";
+type WorkoutPhase = "phase_intro" | "exercise" | "rest" | "summary";
 
 type SavedWorkout = {
   signature: string;
   stepIndex: number;
   phase: WorkoutPhase;
+  introPhase: RoutinePhase;
   startedAt: number;
   restEndsAt: number | null;
 };
@@ -74,6 +80,12 @@ const initialActionState: TraineeWorkoutLogState = {
 };
 
 const WORKOUT_SOUND_STORAGE_KEY = "sthenos:workout-sound-enabled";
+
+const phaseLabels: Record<RoutinePhase, string> = {
+  warmup: "Warm-up",
+  main: "Main workout",
+  cooldown: "Cool-down"
+};
 
 function getLocalDateValue() {
   const now = new Date();
@@ -94,6 +106,9 @@ export function WorkoutPlayer({
   routineId,
   routineName,
   routineDescription,
+  warmupNotes,
+  workoutNotes,
+  cooldownNotes,
   assignmentNotes,
   routineType,
   defaultCycles,
@@ -102,41 +117,73 @@ export function WorkoutPlayer({
 }: WorkoutPlayerProps) {
   const cycleCount = routineType === "circuit" ? Math.max(defaultCycles, 1) : 1;
   const workoutSteps = useMemo(() => {
-    if (routineType === "gym") {
-      return exercises.flatMap((exercise, exerciseIndex) =>
+    const warmupExercises = exercises.filter((exercise) => exercise.phase === "warmup");
+    const mainExercises = exercises.filter((exercise) => exercise.phase === "main");
+    const cooldownExercises = exercises.filter((exercise) => exercise.phase === "cooldown");
+    const singlePassSteps = (phaseExercises: WorkoutPlayerExercise[]) =>
+      phaseExercises.map((exercise, phaseExerciseIndex) => ({
+        exercise,
+        phaseExerciseIndex,
+        phaseExerciseCount: phaseExercises.length,
+        round: 1,
+        setNumber: 1,
+        totalSets: 1
+      }));
+    const mainSteps = routineType === "gym"
+      ? mainExercises.flatMap((exercise, phaseExerciseIndex) =>
         Array.from({ length: Math.max(exercise.sets, 1) }, (_, setIndex) => ({
           exercise,
-          exerciseIndex,
+          phaseExerciseIndex,
+          phaseExerciseCount: mainExercises.length,
           round: 1,
           setNumber: setIndex + 1,
           totalSets: Math.max(exercise.sets, 1)
         }))
-      );
-    }
-
-    return Array.from({ length: cycleCount }, (_, roundIndex) =>
-      exercises.map((exercise, exerciseIndex) => ({
+      )
+      : Array.from({ length: cycleCount }, (_, roundIndex) =>
+        mainExercises.map((exercise, phaseExerciseIndex) => ({
         exercise,
-        exerciseIndex,
+        phaseExerciseIndex,
+        phaseExerciseCount: mainExercises.length,
         round: roundIndex + 1,
         setNumber: 1,
         totalSets: 1
       }))
-    ).flat();
+      ).flat();
+
+    return [
+      ...singlePassSteps(warmupExercises),
+      ...mainSteps,
+      ...singlePassSteps(cooldownExercises)
+    ];
   }, [cycleCount, exercises, routineType]);
   const totalSteps = workoutSteps.length;
   const storageKey = `sthenos:workout:${assignmentId}`;
   const signature = useMemo(
     () =>
       `${routineId}:${routineType}:${workoutSteps
-        .map((step) => `${step.exercise.id}:${step.setNumber}:${step.round}`)
+        .map((step) => `${step.exercise.id}:${step.exercise.phase}:${step.setNumber}:${step.round}`)
         .join(",")}`,
     [routineId, routineType, workoutSteps]
   );
   const touchStart = useRef<{ x: number; y: number } | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const hasPlayedRestChimeRef = useRef(false);
-  const [phase, setPhase] = useState<WorkoutPhase>("exercise");
+  const activePhases = useMemo(() => {
+    const phases: RoutinePhase[] = [];
+    if (warmupNotes || workoutSteps.some((step) => step.exercise.phase === "warmup")) phases.push("warmup");
+    if (workoutNotes || workoutSteps.some((step) => step.exercise.phase === "main")) phases.push("main");
+    if (cooldownNotes || workoutSteps.some((step) => step.exercise.phase === "cooldown")) phases.push("cooldown");
+    return phases;
+  }, [cooldownNotes, warmupNotes, workoutNotes, workoutSteps]);
+  const shouldShowOpeningPhase =
+    activePhases.length > 1 ||
+    activePhases[0] !== "main" ||
+    Boolean(warmupNotes || workoutNotes || cooldownNotes);
+  const [phase, setPhase] = useState<WorkoutPhase>(
+    shouldShowOpeningPhase ? "phase_intro" : "exercise"
+  );
+  const [introPhase, setIntroPhase] = useState<RoutinePhase>(activePhases[0] ?? "main");
   const [stepIndex, setStepIndex] = useState(0);
   const [startedAt, setStartedAt] = useState(() => Date.now());
   const [restEndsAt, setRestEndsAt] = useState<number | null>(null);
@@ -155,18 +202,27 @@ export function WorkoutPlayer({
   );
 
   const currentStep = workoutSteps[stepIndex];
-  const exerciseIndex = currentStep?.exerciseIndex ?? 0;
   const round = currentStep?.round ?? 1;
   const currentExercise = currentStep?.exercise;
-  const nextStepIndex = Math.min(stepIndex + 1, Math.max(totalSteps - 1, 0));
-  const nextStep = workoutSteps[nextStepIndex];
+  const currentRoutinePhase = phase === "phase_intro"
+    ? introPhase
+    : currentExercise?.phase ?? "main";
+  const currentPhaseNotes = currentRoutinePhase === "warmup"
+    ? warmupNotes
+    : currentRoutinePhase === "main"
+      ? workoutNotes
+      : cooldownNotes;
+  const nextStep = workoutSteps[stepIndex + 1];
   const nextExercise = nextStep?.exercise;
+  const isLastStepInPhase = !nextStep || nextStep.exercise.phase !== currentRoutinePhase;
   const completedSteps =
     phase === "summary"
       ? totalSteps
       : phase === "rest"
         ? Math.min(stepIndex + 1, totalSteps)
-        : stepIndex;
+        : phase === "phase_intro" && currentExercise?.phase !== introPhase
+          ? Math.min(stepIndex + 1, totalSteps)
+          : stepIndex;
   const progressPercentage = totalSteps
     ? Math.round((completedSteps / totalSteps) * 100)
     : 0;
@@ -316,7 +372,8 @@ export function WorkoutPlayer({
         !Number.isInteger(saved.stepIndex) ||
         saved.stepIndex < 0 ||
         saved.stepIndex >= totalSteps ||
-        !["exercise", "rest", "summary"].includes(saved.phase) ||
+        !["phase_intro", "exercise", "rest", "summary"].includes(saved.phase) ||
+        !["warmup", "main", "cooldown"].includes(saved.introPhase) ||
         !Number.isFinite(saved.startedAt) ||
         saved.startedAt <= 0 ||
         saved.startedAt > Date.now()
@@ -327,6 +384,7 @@ export function WorkoutPlayer({
 
       setStepIndex(saved.stepIndex);
       setStartedAt(saved.startedAt);
+      setIntroPhase(saved.introPhase);
 
       if (saved.phase === "rest" && saved.restEndsAt) {
         if (saved.restEndsAt > Date.now()) {
@@ -360,6 +418,7 @@ export function WorkoutPlayer({
       signature,
       stepIndex,
       phase,
+      introPhase,
       startedAt,
       restEndsAt
     };
@@ -371,6 +430,7 @@ export function WorkoutPlayer({
   }, [
     actionState.status,
     hasRestored,
+    introPhase,
     phase,
     restEndsAt,
     signature,
@@ -426,12 +486,40 @@ export function WorkoutPlayer({
     setPhase("exercise");
   }
 
+  function continueFromPhaseIntro() {
+    const firstStepIndex = workoutSteps.findIndex(
+      (step) => step.exercise.phase === introPhase
+    );
+    if (firstStepIndex >= 0) {
+      setStepIndex(firstStepIndex);
+      setPhase("exercise");
+      return;
+    }
+
+    const currentPhaseIndex = activePhases.indexOf(introPhase);
+    const nextPhase = activePhases[currentPhaseIndex + 1];
+    if (nextPhase) {
+      setIntroPhase(nextPhase);
+      return;
+    }
+    setPhase("summary");
+  }
+
   function handleExerciseDone() {
     if (!currentExercise) return;
     unlockWorkoutAudio();
 
-    if (stepIndex >= totalSteps - 1) {
-      setPhase("summary");
+    const followingStep = workoutSteps[stepIndex + 1];
+    if (!followingStep || followingStep.exercise.phase !== currentExercise.phase) {
+      const currentPhaseIndex = activePhases.indexOf(currentExercise.phase);
+      const nextPhase = activePhases[currentPhaseIndex + 1];
+      if (!nextPhase) {
+        setPhase("summary");
+        return;
+      }
+      if (followingStep) setStepIndex((current) => current + 1);
+      setIntroPhase(nextPhase);
+      setPhase("phase_intro");
       return;
     }
 
@@ -458,6 +546,22 @@ export function WorkoutPlayer({
       hasPlayedRestChimeRef.current = true;
       setRestEndsAt(null);
       setPhase("exercise");
+      return;
+    }
+
+    if (phase === "phase_intro") {
+      const currentPhaseIndex = activePhases.indexOf(introPhase);
+      const previousPhase = activePhases[currentPhaseIndex - 1];
+      if (!previousPhase) return;
+      const previousStepIndex = workoutSteps
+        .map((step) => step.exercise.phase)
+        .lastIndexOf(previousPhase);
+      if (previousStepIndex >= 0) {
+        setStepIndex(previousStepIndex);
+        setPhase("exercise");
+      } else {
+        setIntroPhase(previousPhase);
+      }
       return;
     }
 
@@ -539,7 +643,11 @@ export function WorkoutPlayer({
             <p className="text-sm font-medium text-primary">
               {phase === "summary"
                 ? "Ready to finish"
-                : routineType === "circuit"
+                : phase === "phase_intro"
+                  ? phaseLabels[currentRoutinePhase]
+                  : currentRoutinePhase !== "main"
+                    ? phaseLabels[currentRoutinePhase]
+                    : routineType === "circuit"
                   ? `Round ${round} of ${cycleCount}`
                   : routineType === "gym" && currentStep
                     ? `Set ${currentStep.setNumber} of ${currentStep.totalSets}`
@@ -610,6 +718,38 @@ export function WorkoutPlayer({
           />
         </div>
 
+        {phase === "phase_intro" ? (
+          <div className="rounded-xl border bg-card p-6 text-center shadow-soft sm:p-10">
+            <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <Flag className="h-7 w-7" aria-hidden="true" />
+            </span>
+            <p className="mt-4 text-sm font-semibold uppercase tracking-wide text-primary">Next phase</p>
+            <h2 className="mt-2 text-2xl font-semibold">{phaseLabels[introPhase]}</h2>
+            <p className="mx-auto mt-3 max-w-xl text-sm text-muted-foreground">
+              {currentPhaseNotes ?? (
+                introPhase === "warmup"
+                  ? "Prepare your body before beginning the main workout."
+                  : introPhase === "main"
+                    ? "Continue with the primary exercises in this routine."
+                    : "Bring your effort down gradually and finish with controlled movement."
+              )}
+            </p>
+            <div className="mt-7 flex flex-col-reverse gap-2 sm:flex-row sm:justify-center">
+              {activePhases.indexOf(introPhase) > 0 ? (
+                <Button type="button" variant="secondary" onClick={handlePrevious}>
+                  <ArrowLeft className="h-4 w-4" aria-hidden="true" /> Back
+                </Button>
+              ) : null}
+              <Button type="button" onClick={continueFromPhaseIntro}>
+                {workoutSteps.some((step) => step.exercise.phase === introPhase)
+                  ? `Start ${phaseLabels[introPhase].toLocaleLowerCase()}`
+                  : "Continue"}
+                <ArrowRight className="h-4 w-4" aria-hidden="true" />
+              </Button>
+            </div>
+          </div>
+        ) : null}
+
         {phase === "exercise" && currentExercise ? (
           <>
             <div
@@ -641,11 +781,11 @@ export function WorkoutPlayer({
               <div className="p-4 sm:p-6" aria-live="polite">
               <div className="mb-4 flex items-center justify-between gap-3 text-sm text-muted-foreground">
                 <span>
-                  Exercise {exerciseIndex + 1} of {exercises.length}
+                  {phaseLabels[currentRoutinePhase]} · Exercise {currentStep.phaseExerciseIndex + 1} of {currentStep.phaseExerciseCount}
                 </span>
-                {routineType === "circuit" ? (
+                {currentRoutinePhase === "main" && routineType === "circuit" ? (
                   <span>Round {round} of {cycleCount}</span>
-                ) : routineType === "gym" && currentStep ? (
+                ) : currentRoutinePhase === "main" && routineType === "gym" && currentStep ? (
                   <span>Set {currentStep.setNumber} of {currentStep.totalSets}</span>
                 ) : null}
               </div>
@@ -736,12 +876,16 @@ export function WorkoutPlayer({
                   Swipe or use the controls
                 </p>
                 <Button type="button" onClick={handleExerciseDone}>
-                  {stepIndex === totalSteps - 1 ? (
+                  {isLastStepInPhase ? (
                     <Flag className="h-4 w-4" aria-hidden="true" />
                   ) : (
                     <ArrowRight className="h-4 w-4" aria-hidden="true" />
                   )}
-                  {stepIndex === totalSteps - 1 ? "Finish exercises" : "Done — Next"}
+                  {stepIndex === totalSteps - 1
+                    ? "Finish workout"
+                    : isLastStepInPhase
+                      ? `Finish ${phaseLabels[currentRoutinePhase].toLocaleLowerCase()}`
+                      : "Done — Next"}
                 </Button>
               </div>
             </div>
@@ -752,7 +896,7 @@ export function WorkoutPlayer({
           <div className="rounded-xl border bg-card p-6 text-center shadow-soft sm:p-10">
             <Clock3 className="mx-auto h-9 w-9 text-warning" aria-hidden="true" />
             <p className="mt-4 text-sm font-medium uppercase tracking-wide text-muted-foreground">
-              {routineType === "gym" ? "Rest before the next set" : "Rest before the next exercise"}
+              {currentRoutinePhase === "main" && routineType === "gym" ? "Rest before the next set" : "Rest before the next exercise"}
             </p>
             <p className="mt-3 text-6xl font-semibold tabular-nums">
               {formatTimer(restSecondsRemaining)}
@@ -761,7 +905,7 @@ export function WorkoutPlayer({
               <p className="mt-4 text-sm text-muted-foreground">
                 Up next:{" "}
                 <span className="font-medium text-foreground">
-                  {routineType === "gym" && nextStep
+                  {currentRoutinePhase === "main" && routineType === "gym" && nextStep
                     ? `${nextExercise.name} · Set ${nextStep.setNumber} of ${nextStep.totalSets}`
                     : nextExercise.name}
                 </span>
@@ -794,17 +938,15 @@ export function WorkoutPlayer({
             <dl className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
               <div className="rounded-lg bg-muted/60 p-4 text-center">
                 <dt className="text-xs font-medium text-muted-foreground">
-                  {routineType === "gym" ? "Total sets" : "Exercises"}
+                  Guided steps
                 </dt>
                 <dd className="mt-1 text-lg font-semibold">{totalSteps}</dd>
               </div>
               <div className="rounded-lg bg-muted/60 p-4 text-center">
                 <dt className="text-xs font-medium text-muted-foreground">
-                  {routineType === "gym" ? "Exercises" : "Rounds"}
+                  Workout phases
                 </dt>
-                <dd className="mt-1 text-lg font-semibold">
-                  {routineType === "gym" ? exercises.length : cycleCount}
-                </dd>
+                <dd className="mt-1 text-lg font-semibold">{activePhases.length}</dd>
               </div>
               <div className="col-span-2 rounded-lg bg-muted/60 p-4 text-center sm:col-span-1">
                 <dt className="text-xs font-medium text-muted-foreground">Time</dt>

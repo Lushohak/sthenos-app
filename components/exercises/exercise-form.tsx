@@ -48,6 +48,9 @@ export function ExerciseForm({ exercise, returnTo }: ExerciseFormProps) {
       <div className="grid gap-4 sm:grid-cols-3">
         <Field label="Category">
           <Select name="category" defaultValue={exercise?.category ?? EXERCISE_CATEGORIES[0]}>
+            {exercise?.category && !EXERCISE_CATEGORIES.includes(exercise.category) ? (
+              <option value={exercise.category}>{exercise.category} (legacy)</option>
+            ) : null}
             {EXERCISE_CATEGORIES.map((category) => (
               <option key={category} value={category}>
                 {category}

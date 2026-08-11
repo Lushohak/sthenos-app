@@ -38,7 +38,8 @@ import {
   saveRoutineDetailsAction,
   saveRoutineExerciseConfigAction,
   type RoutineDetailsInput,
-  type RoutineExerciseConfigInput
+  type RoutineExerciseConfigInput,
+  type RoutinePhase
 } from "@/lib/actions/routine-builder";
 import {
   removeRoutineExerciseAction,
@@ -67,6 +68,7 @@ type RoutineExercise = {
   reps: string;
   rest_seconds: number | null;
   notes: string | null;
+  phase: RoutinePhase;
   exercises:
     | {
         id: string;
@@ -100,6 +102,9 @@ type RoutineBuilderProps = {
     id: string;
     name: string;
     description: string | null;
+    warmup_notes: string | null;
+    workout_notes: string | null;
+    cooldown_notes: string | null;
     routine_type: RoutineType;
     default_cycles: number;
     status: "draft" | "published";
@@ -118,6 +123,32 @@ const steps: Array<{ id: Step; label: string }> = [
   { id: "review", label: "Review" },
   { id: "assign", label: "Assign" }
 ];
+
+const routinePhases: Array<{
+  id: RoutinePhase;
+  label: string;
+  description: string;
+}> = [
+  {
+    id: "warmup",
+    label: "Warm-up",
+    description: "Prepare the body with light cardio, mobility, or activation work."
+  },
+  {
+    id: "main",
+    label: "Main workout",
+    description: "The primary training work, including routine cycles or gym sets."
+  },
+  {
+    id: "cooldown",
+    label: "Cool-down",
+    description: "Gradually recover with easy movement, mobility, or stretching."
+  }
+];
+
+function getPhaseLabel(phase: RoutinePhase) {
+  return routinePhases.find((item) => item.id === phase)?.label ?? "Main workout";
+}
 
 function getExercise(item: RoutineExercise) {
   return Array.isArray(item.exercises) ? item.exercises[0] : item.exercises;
@@ -174,7 +205,8 @@ function ConfigureExerciseCard({
     sets: item.sets,
     reps: item.reps,
     restSeconds: item.rest_seconds,
-    notes: item.notes ?? ""
+    notes: item.notes ?? "",
+    phase: item.phase
   });
   const [status, setStatus] = useState<SaveStatus>("saved");
   const lastSaved = useRef(JSON.stringify(values));
@@ -184,13 +216,13 @@ function ConfigureExerciseCard({
     if (snapshot === lastSaved.current) return;
     setStatus("saving");
     onSaveStatusChange(item.id, "saving");
-    onConfigChange(item.id, values);
     const timeout = window.setTimeout(async () => {
       const result = await saveRoutineExerciseConfigAction(routineId, item.id, values);
       if (result.success) {
         lastSaved.current = snapshot;
         setStatus("saved");
         onSaveStatusChange(item.id, "saved");
+        onConfigChange(item.id, values);
       } else {
         setStatus("error");
         onSaveStatusChange(item.id, "error");
@@ -206,6 +238,7 @@ function ConfigureExerciseCard({
       lastSaved.current = JSON.stringify(values);
       setStatus("saved");
       onSaveStatusChange(item.id, "saved");
+      onConfigChange(item.id, values);
     } else {
       setStatus("error");
       onSaveStatusChange(item.id, "error");
@@ -252,8 +285,13 @@ function ConfigureExerciseCard({
           </Button>
         </div>
       </div>
-      <div className={`mt-4 grid gap-4 border-t pt-4 ${routineType === "gym" ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
-        {routineType === "gym" ? (
+      <div className={`mt-4 grid gap-4 border-t pt-4 ${routineType === "gym" && values.phase === "main" ? "sm:grid-cols-4" : "sm:grid-cols-3"}`}>
+        <Field label="Workout phase">
+          <Select value={values.phase} onChange={(event) => setValues((current) => ({ ...current, phase: event.target.value as RoutinePhase }))}>
+            {routinePhases.map((phase) => <option key={phase.id} value={phase.id}>{phase.label}</option>)}
+          </Select>
+        </Field>
+        {routineType === "gym" && values.phase === "main" ? (
           <Field label="Sets">
             <Input type="number" min={1} max={20} value={values.sets} onChange={(event) => setValues((current) => ({ ...current, sets: Number(event.target.value) }))} />
           </Field>
@@ -290,6 +328,9 @@ export function RoutineBuilder({
   const [details, setDetails] = useState<RoutineDetailsInput>({
     name: routine.name,
     description: routine.description ?? "",
+    warmupNotes: routine.warmup_notes ?? "",
+    workoutNotes: routine.workout_notes ?? "",
+    cooldownNotes: routine.cooldown_notes ?? "",
     routineType: routine.routine_type,
     defaultCycles: routine.default_cycles
   });
@@ -297,6 +338,7 @@ export function RoutineBuilder({
   const lastSavedDetails = useRef(JSON.stringify(details));
   const [libraryQuery, setLibraryQuery] = useState("");
   const [selectedLibraryIds, setSelectedLibraryIds] = useState<Set<string>>(new Set());
+  const [selectedAddPhase, setSelectedAddPhase] = useState<RoutinePhase>("main");
   const [exerciseTab, setExerciseTab] = useState<"library" | "create">("library");
   const [items, setItems] = useState(routineExercises);
   const [configStatuses, setConfigStatuses] = useState<Record<string, SaveStatus>>({});
@@ -330,7 +372,8 @@ export function RoutineBuilder({
                 sets: input.sets,
                 reps: input.reps,
                 rest_seconds: input.restSeconds,
-                notes: input.notes || null
+                notes: input.notes || null,
+                phase: input.phase
               }
             : currentItem
         )
@@ -400,25 +443,30 @@ export function RoutineBuilder({
     startTransition(async () => {
       const result = await addLibraryExercisesAction(
         routine.id,
-        [...selectedLibraryIds]
+        [...selectedLibraryIds],
+        selectedAddPhase
       );
       if (!result.success) {
         setActionError(result.message);
         return;
       }
       setSelectedLibraryIds(new Set());
-      setToast({ open: true, title: "Exercises added", description: "The routine draft has been updated." });
+      setToast({ open: true, title: "Exercises added", description: `Added to ${getPhaseLabel(selectedAddPhase)}.` });
       router.refresh();
     });
   }
 
   function moveItem(itemId: string, offset: number) {
+    const selectedItem = items.find((item) => item.id === itemId);
+    if (!selectedItem) return;
+    const phaseItems = items.filter((item) => item.phase === selectedItem.phase);
+    const phaseIndex = phaseItems.findIndex((item) => item.id === itemId);
+    const targetPhaseItem = phaseItems[phaseIndex + offset];
+    if (!targetPhaseItem) return;
     const index = items.findIndex((item) => item.id === itemId);
-    const targetIndex = index + offset;
-    if (index < 0 || targetIndex < 0 || targetIndex >= items.length) return;
+    const targetIndex = items.findIndex((item) => item.id === targetPhaseItem.id);
     const next = [...items];
-    const [moved] = next.splice(index, 1);
-    next.splice(targetIndex, 0, moved);
+    [next[index], next[targetIndex]] = [next[targetIndex], next[index]];
     setItems(next);
     startTransition(async () => {
       try {
@@ -548,6 +596,21 @@ export function RoutineBuilder({
             <Field label="Description">
               <Textarea value={details.description} onChange={(event) => setDetails((current) => ({ ...current, description: event.target.value }))} />
             </Field>
+            <div className="grid gap-4 rounded-xl border bg-background-secondary p-4">
+              <div>
+                <h3 className="font-semibold">Phase guidance</h3>
+                <p className="mt-1 text-sm text-muted-foreground">Optional instructions appear before each part of the workout.</p>
+              </div>
+              <Field label="Warm-up guidance">
+                <Textarea value={details.warmupNotes} placeholder="e.g. Begin with 10 minutes of easy walking or jogging." onChange={(event) => setDetails((current) => ({ ...current, warmupNotes: event.target.value }))} />
+              </Field>
+              <Field label="Main workout guidance">
+                <Textarea value={details.workoutNotes} placeholder="e.g. Keep each repetition controlled and stop if form breaks down." onChange={(event) => setDetails((current) => ({ ...current, workoutNotes: event.target.value }))} />
+              </Field>
+              <Field label="Cool-down guidance">
+                <Textarea value={details.cooldownNotes} placeholder="e.g. Finish with easy cycling, then complete the stretches below." onChange={(event) => setDetails((current) => ({ ...current, cooldownNotes: event.target.value }))} />
+              </Field>
+            </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label="Routine structure">
                 <Select
@@ -587,7 +650,15 @@ export function RoutineBuilder({
         <section className="grid gap-5">
           <div>
             <h2 className="text-lg font-semibold">Build the exercise list</h2>
-            <p className="mt-1 text-sm text-muted-foreground">Select several library exercises or create a batch without leaving the routine.</p>
+            <p className="mt-1 text-sm text-muted-foreground">Choose a workout phase, then select library exercises or create a batch without leaving the routine.</p>
+          </div>
+          <div className="max-w-sm rounded-xl border bg-card p-4 shadow-soft">
+            <Field label="Add exercises to">
+              <Select value={selectedAddPhase} onChange={(event) => setSelectedAddPhase(event.target.value as RoutinePhase)}>
+                {routinePhases.map((phase) => <option key={phase.id} value={phase.id}>{phase.label}</option>)}
+              </Select>
+            </Field>
+            <p className="mt-2 text-xs text-muted-foreground">{routinePhases.find((phase) => phase.id === selectedAddPhase)?.description}</p>
           </div>
           <div className="flex flex-wrap gap-2" role="tablist" aria-label="Exercise sources">
             <Button type="button" variant={exerciseTab === "library" ? "primary" : "secondary"} role="tab" aria-selected={exerciseTab === "library"} onClick={() => setExerciseTab("library")}>
@@ -639,6 +710,7 @@ export function RoutineBuilder({
               existingExercises={libraryExercises}
               routineId={routine.id}
               routineType={details.routineType}
+              routinePhase={selectedAddPhase}
             />
           )}
           <div className="flex flex-wrap justify-between gap-2 border-t pt-4">
@@ -654,20 +726,44 @@ export function RoutineBuilder({
             <h2 className="text-lg font-semibold">Configure the workout</h2>
             <p className="mt-1 text-sm text-muted-foreground">Set workload, rest, instructions, and order. Each exercise saves automatically.</p>
           </div>
-          {items.map((item, index) => (
-            <ConfigureExerciseCard
-              key={item.id}
-              routineId={routine.id}
-              routineType={details.routineType}
-              item={item}
-              index={index}
-              itemCount={items.length}
-              onMove={moveItem}
-              onRemove={removeItem}
-              onConfigChange={handleConfigChange}
-              onSaveStatusChange={handleConfigSaveStatus}
-            />
-          ))}
+          {routinePhases.map((phase) => {
+            const phaseItems = items.filter((item) => item.phase === phase.id);
+            const guidance = phase.id === "warmup"
+              ? details.warmupNotes
+              : phase.id === "main"
+                ? details.workoutNotes
+                : details.cooldownNotes;
+            return (
+              <section key={phase.id} className="grid gap-3 rounded-xl border bg-background-secondary p-4" aria-labelledby={`${phase.id}-phase-heading`}>
+                <div>
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <h3 id={`${phase.id}-phase-heading`} className="font-semibold">{phase.label}</h3>
+                    <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">{phaseItems.length} {phaseItems.length === 1 ? "exercise" : "exercises"}</span>
+                  </div>
+                  <p className="mt-1 text-sm text-muted-foreground">{guidance || phase.description}</p>
+                </div>
+                {phaseItems.map((item, index) => (
+                  <ConfigureExerciseCard
+                    key={item.id}
+                    routineId={routine.id}
+                    routineType={details.routineType}
+                    item={item}
+                    index={index}
+                    itemCount={phaseItems.length}
+                    onMove={moveItem}
+                    onRemove={removeItem}
+                    onConfigChange={handleConfigChange}
+                    onSaveStatusChange={handleConfigSaveStatus}
+                  />
+                ))}
+                {!phaseItems.length ? (
+                  <div className="rounded-lg border border-dashed bg-card p-4 text-center text-sm text-muted-foreground">
+                    No {phase.label.toLocaleLowerCase()} exercises yet. Move an exercise here or add one from the Exercises step.
+                  </div>
+                ) : null}
+              </section>
+            );
+          })}
           {!items.length ? (
             <div className="rounded-xl border border-dashed bg-card p-8 text-center">
               <Dumbbell className="mx-auto h-8 w-8 text-muted-foreground" aria-hidden="true" />
@@ -693,17 +789,37 @@ export function RoutineBuilder({
             <div className="rounded-xl border bg-card p-4 shadow-soft"><p className="text-xs font-medium uppercase text-muted-foreground">Structure</p><p className="mt-2 font-semibold">{details.routineType === "gym" ? "Gym workout" : details.routineType === "circuit" ? `${details.defaultCycles} cycles` : "Exercise-specific"}</p></div>
             <div className="rounded-xl border bg-card p-4 shadow-soft"><p className="text-xs font-medium uppercase text-muted-foreground">Exercises</p><p className="mt-2 font-semibold">{items.length}</p></div>
           </div>
-          <ol className="divide-y overflow-hidden rounded-xl border bg-card shadow-soft">
-            {items.map((item, index) => {
-              const exercise = getExercise(item);
-              return <li key={item.id} className="flex items-center gap-3 p-3"><span className="w-6 text-center text-sm font-medium text-muted-foreground">{index + 1}</span><ExerciseThumb src={exercise?.thumbnail_url} alt={exercise?.name ?? "Exercise"} className="h-12 w-16" /><span className="min-w-0 flex-1 truncate font-medium">{exercise?.name ?? "Exercise"}</span><span className="text-xs text-muted-foreground">{details.routineType === "gym" ? `${item.sets} sets · ` : ""}{item.reps} reps</span></li>;
+          <div className="grid gap-4">
+            {routinePhases.map((phase) => {
+              const phaseItems = items.filter((item) => item.phase === phase.id);
+              const guidance = phase.id === "warmup"
+                ? details.warmupNotes
+                : phase.id === "main"
+                  ? details.workoutNotes
+                  : details.cooldownNotes;
+              if (!phaseItems.length && !guidance) return null;
+              return (
+                <section key={phase.id} className="overflow-hidden rounded-xl border bg-card shadow-soft">
+                  <div className="border-b bg-background-secondary px-4 py-3">
+                    <h3 className="font-semibold">{phase.label}</h3>
+                    {guidance ? <p className="mt-1 text-sm text-muted-foreground">{guidance}</p> : null}
+                  </div>
+                  <ol className="divide-y">
+                    {phaseItems.map((item, index) => {
+                      const exercise = getExercise(item);
+                      return <li key={item.id} className="flex items-center gap-3 p-3"><span className="w-6 text-center text-sm font-medium text-muted-foreground">{index + 1}</span><ExerciseThumb src={exercise?.thumbnail_url} alt={exercise?.name ?? "Exercise"} className="h-12 w-16" /><span className="min-w-0 flex-1 truncate font-medium">{exercise?.name ?? "Exercise"}</span><span className="text-xs text-muted-foreground">{details.routineType === "gym" && phase.id === "main" ? `${item.sets} sets · ` : ""}{item.reps}</span></li>;
+                    })}
+                    {!phaseItems.length ? <li className="p-4 text-sm text-muted-foreground">Guidance only — no individual exercises.</li> : null}
+                  </ol>
+                </section>
+              );
             })}
-          </ol>
+          </div>
           {status === "draft" ? (
             <div className="rounded-xl border border-primary/30 bg-primary/5 p-5">
               <h3 className="font-semibold">Ready to publish?</h3>
-              <p className="mt-1 text-sm text-muted-foreground">Publishing makes this routine available for trainee assignment.</p>
-              <Button type="button" className="mt-4" disabled={isPending || !items.length || !details.name.trim() || detailSaveStatus !== "saved" || hasUnsavedConfig} onClick={publish}>
+              <p className="mt-1 text-sm text-muted-foreground">Publishing makes this routine available for trainee assignment. At least one Main workout exercise is required.</p>
+              <Button type="button" className="mt-4" disabled={isPending || !items.some((item) => item.phase === "main") || !details.name.trim() || detailSaveStatus !== "saved" || hasUnsavedConfig} onClick={publish}>
                 {isPending ? <Spinner className="h-4 w-4" label="Publishing routine" /> : <CheckCircle2 className="h-4 w-4" aria-hidden="true" />}
                 {isPending ? "Publishing routine..." : "Publish and continue"}
               </Button>

@@ -16,6 +16,7 @@ type RoutineExercise = {
   rest_seconds: number | null;
   notes: string | null;
   position: number;
+  phase: "warmup" | "main" | "cooldown";
   exercises:
     | {
         name: string;
@@ -33,6 +34,15 @@ type RoutineExercise = {
       }[]
     | null;
 };
+
+function phaseLabel(phase: RoutineExercise["phase"]) {
+  return phase === "warmup" ? "Warm-up" : phase === "cooldown" ? "Cool-down" : "Main workout";
+}
+
+function orderedByPhase(items: RoutineExercise[]) {
+  const rank = { warmup: 0, main: 1, cooldown: 2 } as const;
+  return [...items].sort((a, b) => rank[a.phase] - rank[b.phase] || a.position - b.position);
+}
 
 type RoutineExerciseListProps = {
   routineId: string;
@@ -59,12 +69,12 @@ export function RoutineExerciseList({
   readOnly = false,
   showSets = false
 }: RoutineExerciseListProps) {
-  const [items, setItems] = useState(routineExercises);
+  const [items, setItems] = useState(() => orderedByPhase(routineExercises));
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   useEffect(() => {
-    setItems(routineExercises);
+    setItems(orderedByPhase(routineExercises));
   }, [routineExercises]);
 
   function persistOrder(nextItems: RoutineExercise[]) {
@@ -121,7 +131,7 @@ export function RoutineExerciseList({
                         ) : null}
                       </div>
                       <p className="mt-0.5 text-xs text-muted-foreground">
-                        Exercise {index + 1} · Difficulty {exercise?.difficulty ?? "?"}
+                        {phaseLabel(item.phase)} · Exercise {index + 1} · Difficulty {exercise?.difficulty ?? "?"}
                       </p>
                     </div>
                     {!readOnly ? (
@@ -139,7 +149,7 @@ export function RoutineExerciseList({
                     ) : null}
                   </div>
                   <div className="mt-3 flex flex-wrap gap-2 text-xs">
-                    {showSets ? (
+                    {showSets && item.phase === "main" ? (
                       <span className="rounded-md bg-muted px-2.5 py-1.5">
                         <span className="text-muted-foreground">Sets:</span> {item.sets}
                       </span>
@@ -193,6 +203,7 @@ export function RoutineExerciseList({
             <tr>
               {!readOnly ? <Th className="w-12"><span className="sr-only">Move</span></Th> : null}
               <Th className="w-16">Order</Th>
+              <Th>Phase</Th>
               <Th>Exercise</Th>
               {showSets ? <Th>Sets</Th> : null}
               <Th>Reps</Th>
@@ -239,6 +250,7 @@ export function RoutineExerciseList({
                     </Td>
                   ) : null}
                   <Td className="font-medium text-muted-foreground">{index + 1}</Td>
+                  <Td className="text-sm text-muted-foreground">{phaseLabel(item.phase)}</Td>
                   <Td>
                     <div className="flex min-w-52 items-center gap-3">
                       <ExerciseThumb
@@ -261,7 +273,7 @@ export function RoutineExerciseList({
                       </div>
                     </div>
                   </Td>
-                  {showSets ? <Td className="font-medium">{item.sets}</Td> : null}
+                  {showSets ? <Td className="font-medium">{item.phase === "main" ? item.sets : "—"}</Td> : null}
                   <Td className="font-medium">{item.reps}</Td>
                   <Td>{item.rest_seconds ? `${item.rest_seconds}s` : "Not set"}</Td>
                   <Td className="max-w-64 text-muted-foreground">{item.notes ?? "No notes"}</Td>

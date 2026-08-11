@@ -212,14 +212,22 @@ export function RoutinePdfDownload({ routine }: RoutinePdfDownloadProps) {
 
       async function addExerciseSection(
         exercise: RoutinePdfData["exercises"][number],
-        index: number,
         y: number,
         height: number
       ) {
+        const phaseExercises = routine.exercises.filter(
+          (item) => item.phase === exercise.phase
+        );
+        const phaseIndex = phaseExercises.indexOf(exercise);
+        const phaseLabel = exercise.phase === "warmup"
+          ? "WARM-UP"
+          : exercise.phase === "cooldown"
+            ? "COOL-DOWN"
+            : "MAIN WORKOUT";
         pdf.setFont("helvetica", "bold");
         pdf.setFontSize(8);
         pdf.setTextColor(...PDF_COLORS.secondaryText);
-        pdf.text(`EXERCISE ${index + 1} OF ${routine.exercises.length}`, margin, y);
+        pdf.text(`${phaseLabel} · EXERCISE ${phaseIndex + 1} OF ${phaseExercises.length}`, margin, y);
 
         const cardY = y + 5;
         const cardHeight = height - 5;
@@ -264,7 +272,7 @@ export function RoutinePdfDownload({ routine }: RoutinePdfDownloadProps) {
         detailsY += 4;
 
         const stats = [
-          ...(routine.routineType === "gym"
+          ...(routine.routineType === "gym" && exercise.phase === "main"
             ? [{ label: "SETS", value: String(exercise.sets) }]
             : []),
           { label: "REPS", value: exercise.reps },
@@ -366,10 +374,34 @@ export function RoutinePdfDownload({ routine }: RoutinePdfDownloadProps) {
         coverY += 5;
       }
 
+      const phaseGuidance = [
+        { label: "Warm-up", value: routine.warmupNotes },
+        { label: "Main workout", value: routine.workoutNotes },
+        { label: "Cool-down", value: routine.cooldownNotes }
+      ].filter((item) => item.value);
+      if (phaseGuidance.length) {
+        pdf.setFont("helvetica", "bold");
+        pdf.setFontSize(11);
+        pdf.setTextColor(...PDF_COLORS.text);
+        pdf.text("Session guidance", margin, coverY);
+        coverY += 6;
+        phaseGuidance.forEach((item) => {
+          pdf.setFont("helvetica", "bold");
+          pdf.setFontSize(8);
+          pdf.setTextColor(...PDF_COLORS.text);
+          pdf.text(item.label, margin, coverY);
+          coverY = addWrappedText(item.value!, margin + 25, coverY, contentWidth - 25, {
+            size: 8,
+            maxLines: 2
+          });
+          coverY += 2;
+        });
+      }
+
       if (routine.exercises[0]) {
         const exerciseY = Math.max(coverY + 2, 116);
         const exerciseHeight = Math.min(138, pageHeight - 18 - exerciseY);
-        await addExerciseSection(routine.exercises[0], 0, exerciseY, exerciseHeight);
+        await addExerciseSection(routine.exercises[0], exerciseY, exerciseHeight);
       }
 
       const remainingExercises = routine.exercises.slice(1);
@@ -384,7 +416,6 @@ export function RoutinePdfDownload({ routine }: RoutinePdfDownloadProps) {
         paintPage();
         await addExerciseSection(
           remainingExercises[offset],
-          offset + 1,
           exercisePageTop,
           exerciseHeight
         );
@@ -392,7 +423,6 @@ export function RoutinePdfDownload({ routine }: RoutinePdfDownloadProps) {
         if (secondExercise) {
           await addExerciseSection(
             secondExercise,
-            offset + 2,
             exercisePageTop + exerciseHeight + exerciseGap,
             exerciseHeight
           );

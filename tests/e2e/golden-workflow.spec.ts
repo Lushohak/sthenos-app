@@ -98,7 +98,7 @@ test("@smoke coach assignment becomes a trainee workout and coach history", asyn
       timeout: 5_000
     });
     await traineePage
-      .getByRole("button", { name: "Finish exercises" })
+      .getByRole("button", { name: "Finish workout" })
       .click();
     await expect(
       traineePage.getByRole("heading", { name: "Workout complete" })

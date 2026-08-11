@@ -1,11 +1,11 @@
 export const EXERCISE_CATEGORIES = [
   "Strength",
   "Skill",
+  "Cardio",
   "Mobility",
   "Flexibility",
   "Core",
   "Balance",
-  "Warm-up",
   "Corrective"
 ];
 
@@ -19,7 +19,10 @@ export const EXERCISE_EQUIPMENT = [
   "Wall",
   "Box/bench",
   "Floor mat",
-  "Weighted vest"
+  "Weighted vest",
+  "Treadmill",
+  "Stationary bike",
+  "Cardio machine"
 ];
 
 export const EXERCISE_MOVEMENT_PATTERNS = [

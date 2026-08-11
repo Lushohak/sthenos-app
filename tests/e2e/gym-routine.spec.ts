@@ -112,13 +112,13 @@ test("@smoke a coach can build a gym workout with per-exercise sets", async ({
       traineePage.getByText("Set 3 of 3").first()
     ).toBeVisible();
     await traineePage
-      .getByRole("button", { name: "Finish exercises" })
+      .getByRole("button", { name: "Finish workout" })
       .click();
 
     await expect(
       traineePage.getByRole("heading", { name: "Workout complete" })
     ).toBeVisible();
-    await expect(traineePage.getByText("Total sets")).toBeVisible();
+    await expect(traineePage.getByText("Guided steps", { exact: true })).toBeVisible();
     await traineePage.getByLabel("How did it feel?").fill(completionNote);
     await traineePage
       .getByRole("button", { name: "Finish and save workout" })

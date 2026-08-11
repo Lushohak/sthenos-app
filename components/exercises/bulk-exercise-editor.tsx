@@ -5,7 +5,8 @@ import { CheckCircle2, CopyPlus, Plus, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import {
   bulkCreateLibraryExercisesAction,
-  bulkCreateRoutineExercisesAction
+  bulkCreateRoutineExercisesAction,
+  type RoutinePhase
 } from "@/lib/actions/routine-builder";
 import {
   EXERCISE_CATEGORIES,
@@ -46,7 +47,14 @@ type ExerciseRow = {
 
 type Defaults = Pick<
   ExerciseRow,
-  "category" | "difficulty" | "equipment" | "movementPattern" | "primaryMuscles"
+  | "category"
+  | "difficulty"
+  | "equipment"
+  | "movementPattern"
+  | "primaryMuscles"
+  | "sets"
+  | "reps"
+  | "restSeconds"
 >;
 
 type BulkExerciseEditorProps = {
@@ -54,6 +62,7 @@ type BulkExerciseEditorProps = {
   existingExercises: ExistingExercise[];
   routineId?: string;
   routineType?: "circuit" | "individual" | "gym";
+  routinePhase?: RoutinePhase;
 };
 
 const MAX_ROWS = 25;
@@ -74,9 +83,9 @@ function newRow(name: string, defaults: Defaults): ExerciseRow {
     videoUrl: "",
     thumbnail: null,
     createAnyway: false,
-    sets: 3,
-    reps: "10",
-    restSeconds: "",
+    sets: defaults.sets,
+    reps: defaults.reps,
+    restSeconds: defaults.restSeconds,
     notes: ""
   };
 }
@@ -85,7 +94,8 @@ export function BulkExerciseEditor({
   coachId,
   existingExercises,
   routineId,
-  routineType
+  routineType,
+  routinePhase = "main"
 }: BulkExerciseEditorProps) {
   const router = useRouter();
   const [defaults, setDefaults] = useState<Defaults>({
@@ -93,7 +103,10 @@ export function BulkExerciseEditor({
     difficulty: 1,
     equipment: EXERCISE_EQUIPMENT[0],
     movementPattern: EXERCISE_MOVEMENT_PATTERNS[0],
-    primaryMuscles: []
+    primaryMuscles: [],
+    sets: 3,
+    reps: "10",
+    restSeconds: ""
   });
   const [pasteValue, setPasteValue] = useState("");
   const [rows, setRows] = useState<ExerciseRow[]>([]);
@@ -101,6 +114,10 @@ export function BulkExerciseEditor({
   const [error, setError] = useState<string | null>(null);
   const [createdIds, setCreatedIds] = useState<string[]>([]);
   const [toastOpen, setToastOpen] = useState(false);
+  const [toastContent, setToastContent] = useState({
+    title: "",
+    description: ""
+  });
   const [isPending, startTransition] = useTransition();
   const existingByName = useMemo(
     () =>
@@ -160,9 +177,23 @@ export function BulkExerciseEditor({
         difficulty: defaults.difficulty,
         equipment: defaults.equipment,
         movementPattern: defaults.movementPattern,
-        primaryMuscles: defaults.primaryMuscles
+        primaryMuscles: defaults.primaryMuscles,
+        ...(routineId
+          ? {
+              sets: defaults.sets,
+              reps: defaults.reps,
+              restSeconds: defaults.restSeconds
+            }
+          : {})
       }))
     );
+    setToastContent({
+      title: "Configuration applied",
+      description: routineId
+        ? `${rows.length} ${rows.length === 1 ? "row was" : "rows were"} updated with the shared exercise and workload settings.`
+        : `${rows.length} ${rows.length === 1 ? "row was" : "rows were"} updated with the shared exercise settings.`
+    });
+    setToastOpen(true);
   }
 
   function submitRows() {
@@ -244,7 +275,7 @@ export function BulkExerciseEditor({
         const formData = new FormData();
         formData.set("rows", JSON.stringify(serializedRows));
         const result = routineId
-          ? await bulkCreateRoutineExercisesAction(routineId, formData)
+          ? await bulkCreateRoutineExercisesAction(routineId, routinePhase, formData)
           : await bulkCreateLibraryExercisesAction(formData);
         if (!result.success) {
           if (uploadedPaths.length) {
@@ -258,6 +289,12 @@ export function BulkExerciseEditor({
         setCreatedIds(result.ids ?? []);
         setRows([]);
         setPasteValue("");
+        setToastContent({
+          title: routineId ? "Exercises added" : "Exercises created",
+          description: routineId
+            ? "The routine draft has been updated."
+            : "The exercises are available in your library."
+        });
         setToastOpen(true);
         router.refresh();
       } catch (uploadError) {
@@ -302,10 +339,10 @@ export function BulkExerciseEditor({
         </div>
       </section>
 
-      <section className="rounded-xl border bg-card p-4 shadow-soft">
+      <section className="rounded-xl border bg-card p-4 shadow-soft" aria-labelledby="shared-defaults-heading">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h3 className="font-semibold">Shared defaults</h3>
+            <h3 id="shared-defaults-heading" className="font-semibold">Shared defaults</h3>
             <p className="mt-1 text-sm text-muted-foreground">
               New rows inherit these values. You can override them individually.
             </p>
@@ -372,6 +409,21 @@ export function BulkExerciseEditor({
             </Select>
           </Field>
         </div>
+        {routineId ? (
+          <div className={`mt-4 grid gap-4 ${routineType === "gym" && routinePhase === "main" ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
+            {routineType === "gym" && routinePhase === "main" ? (
+              <Field label="Sets">
+                <Input type="number" min={1} max={20} value={defaults.sets} onChange={(event) => setDefaults((current) => ({ ...current, sets: Number(event.target.value) }))} />
+              </Field>
+            ) : null}
+            <Field label="Reps">
+              <Input value={defaults.reps} onChange={(event) => setDefaults((current) => ({ ...current, reps: event.target.value }))} />
+            </Field>
+            <Field label="Rest seconds">
+              <Input type="number" min={0} value={defaults.restSeconds} onChange={(event) => setDefaults((current) => ({ ...current, restSeconds: event.target.value }))} />
+            </Field>
+          </div>
+        ) : null}
         <fieldset className="mt-4">
           <legend className="text-sm font-medium">Primary muscles</legend>
           <div className="mt-2 flex max-h-36 flex-wrap gap-2 overflow-y-auto rounded-md border bg-background-secondary p-3">
@@ -520,8 +572,8 @@ export function BulkExerciseEditor({
                     <Input type="url" value={row.videoUrl} disabled={Boolean(duplicate && !row.createAnyway)} placeholder="https://..." onChange={(event) => updateRow(row.key, { videoUrl: event.target.value })} />
                   </Field>
                   {routineId ? (
-                    <div className={`grid gap-4 ${routineType === "gym" ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
-                      {routineType === "gym" ? (
+                    <div className={`grid gap-4 ${routineType === "gym" && routinePhase === "main" ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
+                      {routineType === "gym" && routinePhase === "main" ? (
                         <Field label="Sets">
                           <Input type="number" min={1} max={20} value={row.sets} onChange={(event) => updateRow(row.key, { sets: Number(event.target.value) })} />
                         </Field>
@@ -596,8 +648,8 @@ export function BulkExerciseEditor({
       <Toast
         open={toastOpen}
         onOpenChange={setToastOpen}
-        title={routineId ? "Exercises added" : "Exercises created"}
-        description={routineId ? "The routine draft has been updated." : "The exercises are available in your library."}
+        title={toastContent.title}
+        description={toastContent.description}
         variant="success"
       />
     </div>

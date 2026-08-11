@@ -124,6 +124,9 @@ export type Database = {
           coach_id: string;
           name: string;
           description: string | null;
+          warmup_notes: string | null;
+          workout_notes: string | null;
+          cooldown_notes: string | null;
           routine_type: "circuit" | "individual" | "gym";
           status: "draft" | "published";
           default_cycles: number;
@@ -135,6 +138,9 @@ export type Database = {
           coach_id: string;
           name: string;
           description?: string | null;
+          warmup_notes?: string | null;
+          workout_notes?: string | null;
+          cooldown_notes?: string | null;
           routine_type?: "circuit" | "individual" | "gym";
           status?: "draft" | "published";
           default_cycles?: number;
@@ -157,6 +163,7 @@ export type Database = {
           routine_id: string;
           exercise_id: string;
           position: number;
+          phase: "warmup" | "main" | "cooldown";
           sets: number;
           reps: string;
           rest_seconds: number | null;
@@ -167,6 +174,7 @@ export type Database = {
           routine_id: string;
           exercise_id: string;
           position?: number;
+          phase?: "warmup" | "main" | "cooldown";
           sets?: number;
           reps: string;
           rest_seconds?: number | null;
@@ -505,6 +513,7 @@ export type Database = {
         | "perceived_intensity";
       activity_assignment_mode: "repeatable" | "one_time";
       routine_lifecycle_status: "draft" | "published";
+      routine_phase: "warmup" | "main" | "cooldown";
     };
     CompositeTypes: {};
   };

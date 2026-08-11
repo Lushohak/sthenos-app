@@ -8,9 +8,14 @@ export type RoutineBuilderResult =
   | { success: true; message?: string; ids?: string[] }
   | { success: false; message: string; rowErrors?: Record<number, string> };
 
+export type RoutinePhase = "warmup" | "main" | "cooldown";
+
 export type RoutineDetailsInput = {
   name: string;
   description: string;
+  warmupNotes: string;
+  workoutNotes: string;
+  cooldownNotes: string;
   routineType: "circuit" | "individual" | "gym";
   defaultCycles: number;
 };
@@ -20,6 +25,7 @@ export type RoutineExerciseConfigInput = {
   reps: string;
   restSeconds: number | null;
   notes: string;
+  phase: RoutinePhase;
 };
 
 type BulkExerciseRow = {
@@ -47,6 +53,10 @@ function normalizeName(value: string) {
 function optionalText(value: string) {
   const normalized = value.trim();
   return normalized || null;
+}
+
+function isRoutinePhase(value: string): value is RoutinePhase {
+  return value === "warmup" || value === "main" || value === "cooldown";
 }
 
 function isValidVideoUrl(value: string) {
@@ -233,6 +243,9 @@ export async function saveRoutineDetailsAction(
     .update({
       name,
       description: optionalText(input.description),
+      warmup_notes: optionalText(input.warmupNotes),
+      workout_notes: optionalText(input.workoutNotes),
+      cooldown_notes: optionalText(input.cooldownNotes),
       routine_type: input.routineType,
       default_cycles: defaultCycles
     })
@@ -249,7 +262,8 @@ export async function saveRoutineDetailsAction(
     const { error: workloadError } = await supabase
       .from("routine_exercises")
       .update({ sets: input.routineType === "gym" ? 3 : 1 })
-      .eq("routine_id", routineId);
+      .eq("routine_id", routineId)
+      .eq("phase", "main");
     if (workloadError) {
       return {
         success: false,
@@ -282,14 +296,18 @@ export async function saveRoutineExerciseConfigAction(
   if (input.restSeconds !== null && input.restSeconds < 0) {
     return { success: false, message: "Rest time cannot be negative." };
   }
+  if (!isRoutinePhase(input.phase)) {
+    return { success: false, message: "Choose a valid workout phase." };
+  }
 
   const { error } = await supabase
     .from("routine_exercises")
     .update({
       sets:
-        routine.routine_type === "gym"
+        input.phase === "main" && routine.routine_type === "gym"
           ? Math.min(20, Math.max(1, Math.trunc(input.sets)))
           : 1,
+      phase: input.phase,
       reps,
       rest_seconds: input.restSeconds,
       notes: optionalText(input.notes)
@@ -304,11 +322,13 @@ export async function saveRoutineExerciseConfigAction(
 
 export async function addLibraryExercisesAction(
   routineId: string,
-  exerciseIds: string[]
+  exerciseIds: string[],
+  phase: RoutinePhase
 ): Promise<RoutineBuilderResult> {
   const { supabase, user } = await getUserOrRedirect();
   const uniqueIds = Array.from(new Set(exerciseIds.filter(Boolean))).slice(0, 25);
   if (!uniqueIds.length) return { success: false, message: "Select at least one exercise." };
+  if (!isRoutinePhase(phase)) return { success: false, message: "Choose a valid workout phase." };
 
   const [{ data: routine }, { data: exercises, error: exercisesError }, { data: lastItem }] =
     await Promise.all([
@@ -347,7 +367,8 @@ export async function addLibraryExercisesAction(
       routine_id: routineId,
       exercise_id: exerciseId,
       position: startPosition + index + 1,
-      sets: routine.routine_type === "gym" ? 3 : 1,
+      phase,
+      sets: phase === "main" && routine.routine_type === "gym" ? 3 : 1,
       reps: "10"
     }))
   );
@@ -359,8 +380,12 @@ export async function addLibraryExercisesAction(
 
 export async function bulkCreateRoutineExercisesAction(
   routineId: string,
+  phase: RoutinePhase,
   formData: FormData
 ): Promise<RoutineBuilderResult> {
+  if (!isRoutinePhase(phase)) {
+    return { success: false, message: "Choose a valid workout phase." };
+  }
   const parsed = parseBulkRows(formData);
   if (!parsed.success) return parsed.result;
 
@@ -398,7 +423,8 @@ export async function bulkCreateRoutineExercisesAction(
       sets: row.sets,
       reps: row.reps,
       rest_seconds: row.restSeconds,
-      notes: row.notes
+      notes: row.notes,
+      phase
     })) as Json;
     const { data, error } = await supabase.rpc(
       "bulk_create_and_add_routine_exercises",
@@ -510,11 +536,12 @@ export async function publishRoutineAction(
       .from("routine_exercises")
       .select("id", { count: "exact", head: true })
       .eq("routine_id", routineId)
+      .eq("phase", "main")
   ]);
   if (!routine) return { success: false, message: "This routine is unavailable." };
   if (!routine.name.trim()) return { success: false, message: "Routine name is required." };
   if (countError || !count) {
-    return { success: false, message: "Add at least one exercise before publishing." };
+    return { success: false, message: "Add at least one exercise to the Main workout before publishing." };
   }
   if (routine.status === "published") return { success: true };
 
