@@ -1,6 +1,6 @@
 # Sthenos feature inventory
 
-Last reviewed: August 10, 2026
+Last reviewed: August 11, 2026
 
 This document describes functionality currently present in Sthenos. A
 **Routine** is an exercise-based workout. An **Activity** is a separately
@@ -34,7 +34,11 @@ limit trainees to their linked profile, assignments, and logs.
 
 ### Exercise library
 
-- [x] Create, view, search, edit, and archive coach-owned exercises.
+- [x] Create, view, search, edit, and archive coach-owned exercises in the
+  compact Exercise Library.
+- [x] Filter exercises by category, equipment, difficulty, movement pattern,
+  and primary muscles; combine filters, sort results, and preserve the Library
+  view in the URL when navigating back from an exercise.
 - [x] Store category, difficulty, equipment, movement pattern, primary muscles,
   thumbnail images, and external demonstration video URLs.
 - [x] Show affected Routines before archival and retain archived exercises in
@@ -48,7 +52,8 @@ exercises cannot currently be restored from the coach UI.
 - [x] Create circuit, individual, and Gym workout templates.
 - [x] Configure cycles for circuit/individual Routines and sets plus reps for
   Gym Routines.
-- [x] Search, add, reorder, and remove exercises while composing a Routine.
+- [x] Search, filter, multi-select, add, reorder, and remove exercises while
+  composing a Routine, with selections retained when filters change.
 - [x] Organize every Routine around a required Main workout with optional
   Warm-up and Cool-down phases, autosaved guidance, and reusable visual cards.
 - [x] Perform warm-up and cool-down exercises once while retaining cycles and

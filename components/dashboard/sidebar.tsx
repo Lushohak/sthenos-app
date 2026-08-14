@@ -11,8 +11,8 @@ import { cn } from "@/lib/utils";
 const links = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/dashboard/clients", label: "Clients", icon: Users },
-  { href: "/dashboard/exercises", label: "Exercises", icon: Library },
-  { href: "/dashboard/routines", label: "Routines", icon: Dumbbell },
+  { href: "/dashboard/exercises", label: "Exercise Library", icon: Library },
+  { href: "/dashboard/routines", label: "Routine Builder", icon: Dumbbell },
   { href: "/dashboard/activities", label: "Activities", icon: Footprints },
   { href: "/dashboard/progress", label: "Progress", icon: BarChart3 }
 ];

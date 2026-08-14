@@ -3,7 +3,6 @@
 import {
   useEffect,
   useCallback,
-  useMemo,
   useRef,
   useState,
   useTransition
@@ -18,12 +17,12 @@ import {
   Library,
   Plus,
   RotateCcw,
-  Search,
   Trash2,
   Users
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { BulkExerciseEditor } from "@/components/exercises/bulk-exercise-editor";
+import { ExerciseBrowser } from "@/components/exercises/exercise-browser";
 import { ExerciseThumb } from "@/components/exercises/exercise-thumb";
 import { BulkAssignRoutineForm } from "@/components/forms/bulk-assign-routine-form";
 import { Button } from "@/components/ui/button";
@@ -59,6 +58,7 @@ type LibraryExercise = {
   movement_pattern: string | null;
   primary_muscles: string[];
   thumbnail_url: string | null;
+  created_at: string;
 };
 
 type RoutineExercise = {
@@ -336,7 +336,6 @@ export function RoutineBuilder({
   });
   const [detailSaveStatus, setDetailSaveStatus] = useState<SaveStatus>("saved");
   const lastSavedDetails = useRef(JSON.stringify(details));
-  const [libraryQuery, setLibraryQuery] = useState("");
   const [selectedLibraryIds, setSelectedLibraryIds] = useState<Set<string>>(new Set());
   const [selectedAddPhase, setSelectedAddPhase] = useState<RoutinePhase>("main");
   const [exerciseTab, setExerciseTab] = useState<"library" | "create">("library");
@@ -410,22 +409,6 @@ export function RoutineBuilder({
     }, 700);
     return () => window.clearTimeout(timeout);
   }, [details, routine.id]);
-
-  const normalizedQuery = libraryQuery.trim().toLocaleLowerCase();
-  const filteredLibrary = useMemo(() => {
-    if (!normalizedQuery) return libraryExercises;
-    return libraryExercises.filter((exercise) =>
-      [
-        exercise.name,
-        exercise.category,
-        exercise.equipment,
-        exercise.movement_pattern,
-        ...exercise.primary_muscles
-      ]
-        .filter(Boolean)
-        .some((value) => value?.toLocaleLowerCase().includes(normalizedQuery))
-    );
-  }, [libraryExercises, normalizedQuery]);
 
   async function retryDetails() {
     setDetailSaveStatus("saving");
@@ -670,32 +653,22 @@ export function RoutineBuilder({
           </div>
           {exerciseTab === "library" ? (
             <div className="grid gap-4">
-              <div className="relative max-w-xl">
-                <Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-muted-foreground" aria-hidden="true" />
-                <Input type="search" className="pl-9" value={libraryQuery} placeholder="Search by name, category, equipment..." aria-label="Search exercise library" onChange={(event) => setLibraryQuery(event.target.value)} />
-              </div>
-              <fieldset className="grid max-h-[34rem] gap-3 overflow-y-auto rounded-xl border bg-card p-3 sm:grid-cols-2 xl:grid-cols-3">
-                <legend className="sr-only">Select exercises</legend>
-                {filteredLibrary.map((exercise) => {
-                  const selected = selectedLibraryIds.has(exercise.id);
-                  return (
-                    <label key={exercise.id} className="grid cursor-pointer grid-cols-[auto_5rem_1fr] gap-3 rounded-lg border p-3 transition hover:border-primary/60 has-[:checked]:border-primary has-[:checked]:ring-2 has-[:checked]:ring-primary/15">
-                      <input className="mt-2 h-4 w-4 accent-primary" type="checkbox" value={exercise.id} checked={selected} onChange={() => setSelectedLibraryIds((current) => {
-                        const next = new Set(current);
-                        selected ? next.delete(exercise.id) : next.add(exercise.id);
-                        return next;
-                      })} />
-                      <ExerciseThumb src={exercise.thumbnail_url} alt={exercise.name} className="h-16 w-20" />
-                      <span className="min-w-0">
-                        <span className="block truncate text-sm font-semibold">{exercise.name}</span>
-                        <span className="mt-1 block text-xs text-muted-foreground">{exercise.category ?? "Uncategorized"} · Difficulty {exercise.difficulty}</span>
-                        <span className="mt-1 block truncate text-xs text-muted-foreground">{exercise.equipment ?? "No equipment"}</span>
-                      </span>
-                    </label>
-                  );
-                })}
-                {!filteredLibrary.length ? <p className="p-4 text-sm text-muted-foreground">No exercises match this search.</p> : null}
-              </fieldset>
+              <ExerciseBrowser
+                mode="picker"
+                exercises={libraryExercises.map((exercise) => ({
+                  id: exercise.id,
+                  name: exercise.name,
+                  category: exercise.category,
+                  difficulty: exercise.difficulty,
+                  equipment: exercise.equipment,
+                  movementPattern: exercise.movement_pattern,
+                  primaryMuscles: exercise.primary_muscles,
+                  thumbnailUrl: exercise.thumbnail_url,
+                  createdAt: exercise.created_at
+                }))}
+                selectedIds={[...selectedLibraryIds]}
+                onSelectionChange={(selectedIds) => setSelectedLibraryIds(new Set(selectedIds))}
+              />
               <div className="sticky bottom-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-card/95 p-4 shadow-xl backdrop-blur">
                 <p className="text-sm text-muted-foreground">{selectedLibraryIds.size} selected</p>
                 <Button type="button" disabled={!selectedLibraryIds.size || isPending} onClick={addSelectedLibraryExercises}>

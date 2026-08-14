@@ -1,32 +1,42 @@
-import Link from "next/link";
-import { Search } from "lucide-react";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { LinkButton } from "@/components/ui/button";
-import { Input } from "@/components/ui/field";
-import { ExerciseThumb } from "@/components/exercises/exercise-thumb";
+import {
+  ExerciseBrowser,
+  type ExerciseSortMode
+} from "@/components/exercises/exercise-browser";
 import { ExerciseArchivedToast } from "@/components/exercises/exercise-archived-toast";
 import { getUserOrRedirect } from "@/lib/auth";
 
 type PageProps = {
-  searchParams?: Promise<{ q?: string; archived?: string }>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 };
+
+function firstValue(value: string | string[] | undefined) {
+  return Array.isArray(value) ? value[0] ?? "" : value ?? "";
+}
+
+function listValue(value: string | string[] | undefined) {
+  return (Array.isArray(value) ? value : value ? [value] : [])
+    .flatMap((item) => item.split(","))
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
 
 export default async function ExercisesPage({ searchParams }: PageProps) {
   const { supabase, user } = await getUserOrRedirect();
   const resolvedSearchParams = await searchParams;
-  const query = resolvedSearchParams?.q?.trim() ?? "";
-  const archivedExerciseName = resolvedSearchParams?.archived?.trim() ?? "";
-  let request = supabase
+  const query = firstValue(resolvedSearchParams?.q).trim();
+  const archivedExerciseName = firstValue(resolvedSearchParams?.archived).trim();
+  const requestedSort = firstValue(resolvedSearchParams?.sort);
+  const sort: ExerciseSortMode = ["name", "recent", "difficulty"].includes(requestedSort)
+    ? requestedSort as ExerciseSortMode
+    : "name";
+  const request = supabase
     .from("exercises")
     .select("*")
     .eq("coach_id", user.id)
     .is("archived_at", null)
     .order("name");
-
-  if (query) {
-    const safeQuery = query.replaceAll(",", " ");
-    request = request.or(`name.ilike.%${safeQuery}%,category.ilike.%${safeQuery}%,equipment.ilike.%${safeQuery}%,movement_pattern.ilike.%${safeQuery}%`);
-  }
 
   const { data: exercises, error } = await request;
 
@@ -35,7 +45,7 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
   return (
     <>
       <PageHeader
-        title="Exercises"
+        title="Exercise Library"
         description="Manage reusable movements for routine creation."
         action={
           <div className="flex flex-wrap gap-2">
@@ -46,37 +56,30 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
           </div>
         }
       />
-      <form className="mb-4 flex max-w-xl gap-2">
-        <div className="relative flex-1">
-          <Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-muted-foreground" aria-hidden="true" />
-          <Input name="q" defaultValue={query} className="pl-9" placeholder="Search exercises" />
-        </div>
-      </form>
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        {exercises?.map((exercise) => (
-          <Link
-            key={exercise.id}
-            href={`/dashboard/exercises/${exercise.id}`}
-            className="rounded-md border bg-card p-3 shadow-soft transition-colors hover:border-secondary"
-          >
-            <ExerciseThumb src={exercise.thumbnail_url} alt={exercise.name} />
-            <div className="mt-3">
-              <h2 className="font-semibold">{exercise.name}</h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Difficulty {exercise.difficulty} · {exercise.category ?? "Uncategorized"}
-              </p>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {exercise.equipment ?? "No equipment"} · {exercise.movement_pattern ?? "No pattern"}
-              </p>
-            </div>
-          </Link>
-        ))}
-        {!exercises?.length ? (
-          <div className="rounded-md border bg-card p-4 text-sm text-muted-foreground shadow-soft">
-            No exercises found.
-          </div>
-        ) : null}
-      </section>
+      <ExerciseBrowser
+        mode="library"
+        exercises={(exercises ?? []).map((exercise) => ({
+          id: exercise.id,
+          name: exercise.name,
+          category: exercise.category,
+          difficulty: exercise.difficulty,
+          equipment: exercise.equipment,
+          movementPattern: exercise.movement_pattern,
+          primaryMuscles: exercise.primary_muscles,
+          thumbnailUrl: exercise.thumbnail_url,
+          createdAt: exercise.created_at
+        }))}
+        initialFilters={{
+          query,
+          categories: listValue(resolvedSearchParams?.category),
+          equipment: listValue(resolvedSearchParams?.equipment),
+          difficulties: listValue(resolvedSearchParams?.difficulty),
+          movementPatterns: listValue(resolvedSearchParams?.pattern),
+          primaryMuscles: listValue(resolvedSearchParams?.muscle),
+          sort
+        }}
+        syncFiltersToUrl
+      />
       {archivedExerciseName ? (
         <ExerciseArchivedToast exerciseName={archivedExerciseName} />
       ) : null}

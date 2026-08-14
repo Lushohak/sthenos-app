@@ -51,8 +51,8 @@ test("@smoke a coach can build a gym workout with per-exercise sets", async ({
   await page.getByRole("button", { name: "Start building" }).click();
 
   await expect(page.getByRole("heading", { name: routineName })).toBeVisible();
-  await page.getByLabel("Search exercise library").fill(exerciseName);
-  await page.getByRole("checkbox", { name: new RegExp(exerciseName) }).check();
+  await page.getByLabel("Search exercises").fill(exerciseName);
+  await page.getByRole("checkbox", { name: new RegExp(exerciseName) }).click();
   await page.getByRole("button", { name: "Add 1 to routine" }).click();
   await page.getByRole("button", { name: "Configure 1 exercises" }).click();
   await page.getByLabel("Sets").fill("3");

@@ -51,7 +51,7 @@ export default async function RoutineDetailPage({ params, searchParams }: PagePr
       .order("position"),
     supabase
       .from("exercises")
-      .select("id, name, category, difficulty, equipment, movement_pattern, primary_muscles, thumbnail_url")
+      .select("id, name, category, difficulty, equipment, movement_pattern, primary_muscles, thumbnail_url, created_at")
       .eq("coach_id", user.id)
       .is("archived_at", null)
       .order("name"),

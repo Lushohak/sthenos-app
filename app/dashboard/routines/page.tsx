@@ -41,7 +41,7 @@ export default async function RoutinesPage({ searchParams }: PageProps) {
   return (
     <>
       <PageHeader
-        title="Routines"
+        title="Routine Builder"
         description={
           showArchived
             ? "Review and restore archived workout templates."
