@@ -13,6 +13,7 @@ import {
 } from "@/lib/activities";
 import { getUserOrRedirect } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
+import type { LoggableActivityAssignment } from "@/lib/client-roster";
 import type { Json } from "@/types/database";
 
 const ACTIVITY_MEDIA_TYPES = new Set([
@@ -97,9 +98,105 @@ export type ActivityLogState = ActivityMutationState & {
   completedOneTime: boolean;
 };
 
+export type QuickCreateActivityState = ActivityMutationState & {
+  assignment: LoggableActivityAssignment | null;
+};
+
 export type ArchiveActivityResult =
   | { success: true }
   | { success: false; message: string };
+
+export async function quickCreateAndAssignActivityAction(
+  clientId: string,
+  _previousState: QuickCreateActivityState,
+  formData: FormData
+): Promise<QuickCreateActivityState> {
+  const { supabase, user } = await getUserOrRedirect();
+  const name = String(formData.get("name") ?? "").trim();
+  if (!name) {
+    return { status: "error", message: "Enter an Activity name.", assignment: null };
+  }
+  if (name.length > 120) {
+    return { status: "error", message: "Activity names must be 120 characters or fewer.", assignment: null };
+  }
+
+  const trackedMetrics = Array.from(new Set(
+    formData.getAll("tracked_metrics").map(String)
+  )).filter((value): value is ActivityMetricKey =>
+    ACTIVITY_METRIC_KEYS.includes(value as ActivityMetricKey)
+  );
+  const { data: client, error: clientError } = await supabase
+    .from("clients")
+    .select("id, status")
+    .eq("id", clientId)
+    .eq("coach_id", user.id)
+    .maybeSingle();
+  if (clientError || !client) {
+    return { status: "error", message: "This trainee is no longer available.", assignment: null };
+  }
+  if (client.status !== "active") {
+    return {
+      status: "error",
+      message: "Resume this trainee before creating a new Activity assignment.",
+      assignment: null
+    };
+  }
+
+  const { data: activity, error: activityError } = await supabase
+    .from("activities")
+    .insert({
+      coach_id: user.id,
+      name,
+      tracked_metrics: trackedMetrics,
+      required_metrics: [],
+      default_targets: {} as Json
+    })
+    .select("id")
+    .single();
+  if (activityError || !activity) {
+    return { status: "error", message: "We could not create this Activity.", assignment: null };
+  }
+
+  const { data: assignment, error: assignmentError } = await supabase
+    .from("client_activities")
+    .insert({
+      coach_id: user.id,
+      client_id: clientId,
+      activity_id: activity.id,
+      assignment_mode: "repeatable",
+      tracked_metrics: trackedMetrics,
+      required_metrics: [],
+      targets: {} as Json,
+      status: "active"
+    })
+    .select("id")
+    .single();
+
+  if (assignmentError || !assignment) {
+    await supabase.from("activities").delete().eq("id", activity.id).eq("coach_id", user.id);
+    return {
+      status: "error",
+      message: "We could not assign this Activity. Please try again.",
+      assignment: null
+    };
+  }
+
+  revalidatePath("/dashboard/activities");
+  revalidatePath("/dashboard/clients");
+  revalidatePath(`/dashboard/clients/${clientId}`);
+  revalidatePath("/trainee");
+  return {
+    status: "success",
+    message: `${name} was created and assigned.`,
+    assignment: {
+      id: assignment.id,
+      activityName: name,
+      trackedMetrics,
+      requiredMetrics: [],
+      targets: {}
+    }
+  };
+}
 
 export async function createActivityAction(formData: FormData) {
   const { supabase, user } = await getUserOrRedirect();
@@ -400,6 +497,7 @@ export async function updateActivityAssignmentsStatusAction(
 
 export async function createActivityLogAction(
   assignmentId: string,
+  completionBehavior: "redirect" | "return",
   _previousState: ActivityLogState,
   formData: FormData
 ): Promise<ActivityLogState> {
@@ -460,16 +558,31 @@ export async function createActivityLogAction(
   }
 
   if (assignment.assignment_mode === "one_time") {
+    if (completionBehavior === "return") {
+      revalidatePath("/dashboard/clients");
+      revalidatePath(`/dashboard/clients/${assignment.client_id}`);
+      revalidatePath("/dashboard");
+      return {
+        status: "success",
+        message: "Activity completed and moved to training history.",
+        completedOneTime: true
+      };
+    }
     const activity = Array.isArray(assignment.activities)
       ? assignment.activities[0]
       : assignment.activities;
     const destination = user.id === assignment.coach_id
-      ? `/dashboard/clients/${assignment.client_id}`
+      ? `/dashboard/clients/${assignment.client_id}?tab=history&activityCompleted=${encodeURIComponent(activity?.name ?? "Activity")}`
       : "/trainee";
-    redirect(
-      `${destination}?activityCompleted=${encodeURIComponent(activity?.name ?? "Activity")}`
+    redirect(user.id === assignment.coach_id
+      ? destination
+      : `${destination}?activityCompleted=${encodeURIComponent(activity?.name ?? "Activity")}`
     );
   }
+
+  revalidatePath("/dashboard/clients");
+  revalidatePath(`/dashboard/clients/${assignment.client_id}`);
+  revalidatePath("/dashboard");
 
   return {
     status: "success",

@@ -1,35 +1,71 @@
-import { createWorkoutLogAction } from "@/lib/actions/clients";
+"use client";
+
+import { useActionState, useEffect, useRef, useState } from "react";
+import {
+  createWorkoutLogAction,
+  type WorkoutLogState
+} from "@/lib/actions/clients";
 import { Field, Input, Select, Textarea } from "@/components/ui/field";
 import { SubmitButton } from "@/components/ui/submit-button";
-import type { Database } from "@/types/database";
-
-type Routine = Database["public"]["Tables"]["workout_routines"]["Row"];
-type Assignment = Database["public"]["Tables"]["client_routines"]["Row"] & {
-  workout_routines: Pick<Routine, "id" | "name"> | null;
-};
+import { Toast } from "@/components/ui/toast";
+import type { RoutineLogAssignment } from "@/lib/client-roster";
 
 type Props = {
   clientId: string;
-  routines: Routine[];
-  assignments: Assignment[];
+  assignments: RoutineLogAssignment[];
+  today?: string;
+  requireExplicitRoutineChoice?: boolean;
+  onSuccess?: () => void;
 };
 
-export function WorkoutLogForm({ clientId, assignments }: Pick<Props, "clientId" | "assignments">) {
+const initialState: WorkoutLogState = {
+  status: "idle",
+  message: ""
+};
+
+export function WorkoutLogForm({
+  clientId,
+  assignments,
+  today = new Date().toISOString().slice(0, 10),
+  requireExplicitRoutineChoice = false,
+  onSuccess
+}: Props) {
+  const formRef = useRef<HTMLFormElement>(null);
+  const [toastOpen, setToastOpen] = useState(false);
+  const [state, formAction] = useActionState(
+    createWorkoutLogAction.bind(null, clientId),
+    initialState
+  );
+  const defaultRoutineId = assignments.length === 1
+    ? assignments[0].routineId
+    : assignments.length === 0 || !requireExplicitRoutineChoice
+      ? "unstructured"
+      : "";
+
+  useEffect(() => {
+    if (state.status !== "success") return;
+    formRef.current?.reset();
+    setToastOpen(true);
+    onSuccess?.();
+  }, [onSuccess, state]);
+
   return (
-    <form action={createWorkoutLogAction.bind(null, clientId)} className="grid gap-4 rounded-md border bg-card p-4 shadow-soft">
+    <>
+    <form ref={formRef} action={formAction} className="grid gap-4 rounded-md border bg-card p-4 shadow-soft">
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Date trained">
-          <Input name="trained_on" type="date" defaultValue={new Date().toISOString().slice(0, 10)} required />
+          <Input name="trained_on" type="date" defaultValue={today} max={today} required />
         </Field>
         <Field label="Routine">
-          <Select name="routine_id">
-            <option value="">No routine</option>
+          <Select name="routine_id" defaultValue={defaultRoutineId} required={requireExplicitRoutineChoice && assignments.length > 1}>
+            {requireExplicitRoutineChoice && assignments.length > 1 ? (
+              <option value="" disabled>Choose a routine or unstructured workout</option>
+            ) : null}
+            <option value="unstructured">Unstructured workout</option>
             {assignments.map((assignment) =>
-              assignment.workout_routines ? (
-                <option key={assignment.id} value={assignment.workout_routines.id}>
-                  {assignment.workout_routines.name}
-                </option>
-              ) : null
+              <option key={assignment.id} value={assignment.routineId}>
+                {assignment.routineName}
+              </option>
             )}
           </Select>
         </Field>
@@ -46,9 +82,22 @@ export function WorkoutLogForm({ clientId, assignments }: Pick<Props, "clientId"
       <Field label="Notes">
         <Textarea name="notes" />
       </Field>
+      {state.status === "error" ? (
+        <p className="rounded-md border border-destructive/25 bg-destructive/5 px-3 py-2 text-sm text-destructive" role="alert">
+          {state.message}
+        </p>
+      ) : null}
       <SubmitButton className="w-fit" pendingLabel="Saving workout...">
         Mark completed
       </SubmitButton>
     </form>
+    <Toast
+      open={toastOpen}
+      onOpenChange={setToastOpen}
+      title="Workout logged"
+      description={state.message}
+      variant="success"
+    />
+    </>
   );
 }

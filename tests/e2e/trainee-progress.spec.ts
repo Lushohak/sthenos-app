@@ -68,7 +68,7 @@ test("@smoke a trainee records body progress that is shared with their coach", a
   const coachPage = await coachContext.newPage();
   try {
     await logIn(coachPage, coach);
-    await coachPage.goto(`/dashboard/clients/${client!.id}`);
+    await coachPage.goto(`/dashboard/clients/${client!.id}?tab=progress`);
     await expect(coachPage.getByRole("cell", { name: "78.4 kg" })).toBeVisible();
     await expect(coachPage.getByRole("cell", { name: "42.5%" })).toBeVisible();
     await expect(coachPage.getByRole("cell", { name: "Trainee" })).toBeVisible();

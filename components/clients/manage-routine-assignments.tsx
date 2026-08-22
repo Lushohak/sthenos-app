@@ -1,8 +1,10 @@
 "use client";
 
 import { PauseCircle, PlayCircle } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useState } from "react";
-import { RoutineMultiSelect } from "@/components/forms/routine-multi-select";
+import type { ReactNode } from "react";
+import { AssignmentSelectionList } from "@/components/clients/assignment-selection-list";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { SubmitButton } from "@/components/ui/submit-button";
@@ -17,12 +19,7 @@ type RoutineAssignment = {
   routineName: string;
   status: "active" | "paused";
   routineArchived: boolean;
-};
-
-type ManageRoutineAssignmentsProps = {
-  clientId: string;
-  clientName: string;
-  assignments: RoutineAssignment[];
+  notes?: string | null;
 };
 
 const initialState: UpdateRoutineAssignmentsState = {
@@ -34,21 +31,22 @@ const initialState: UpdateRoutineAssignmentsState = {
 export function ManageRoutineAssignments({
   clientId,
   clientName,
-  assignments
-}: ManageRoutineAssignmentsProps) {
-  const activeAssignments = assignments.filter(
-    (assignment) => assignment.status === "active"
-  );
-  const pausedAssignments = assignments.filter(
-    (assignment) => assignment.status === "paused"
-  );
+  assignments,
+  action
+}: {
+  clientId: string;
+  clientName: string;
+  assignments: RoutineAssignment[];
+  action?: ReactNode;
+}) {
+  const router = useRouter();
+  const active = assignments.filter((assignment) => assignment.status === "active");
+  const paused = assignments.filter((assignment) => assignment.status === "paused");
   const [pauseSelection, setPauseSelection] = useState<string[]>([]);
   const [resumeSelection, setResumeSelection] = useState<string[]>([]);
-  const [pauseVersion, setPauseVersion] = useState(0);
-  const [resumeVersion, setResumeVersion] = useState(0);
-  const [isPauseModalOpen, setIsPauseModalOpen] = useState(false);
-  const [isPauseToastOpen, setIsPauseToastOpen] = useState(false);
-  const [isResumeToastOpen, setIsResumeToastOpen] = useState(false);
+  const [pauseModalOpen, setPauseModalOpen] = useState(false);
+  const [pauseToastOpen, setPauseToastOpen] = useState(false);
+  const [resumeToastOpen, setResumeToastOpen] = useState(false);
   const [pauseState, pauseAction] = useActionState(
     updateRoutineAssignmentsStatusAction.bind(null, clientId, "paused"),
     initialState
@@ -60,176 +58,104 @@ export function ManageRoutineAssignments({
 
   useEffect(() => {
     if (pauseState.status !== "success") return;
-
     setPauseSelection([]);
-    setPauseVersion((current) => current + 1);
-    setIsPauseModalOpen(false);
-    setIsPauseToastOpen(true);
-  }, [pauseState]);
+    setPauseModalOpen(false);
+    setPauseToastOpen(true);
+    router.refresh();
+  }, [pauseState, router]);
 
   useEffect(() => {
     if (resumeState.status !== "success") return;
-
     setResumeSelection([]);
-    setResumeVersion((current) => current + 1);
-    setIsResumeToastOpen(true);
-  }, [resumeState]);
+    setResumeToastOpen(true);
+    router.refresh();
+  }, [resumeState, router]);
 
-  const selectedPauseNames = activeAssignments
-    .filter((assignment) => pauseSelection.includes(assignment.id))
-    .map((assignment) => assignment.routineName);
-
-  if (!assignments.length) return null;
+  const activeItems = active.map((assignment) => ({
+    id: assignment.id,
+    name: assignment.routineName,
+    archived: assignment.routineArchived,
+    notes: assignment.notes
+  }));
+  const pausedItems = paused.map((assignment) => ({
+    id: assignment.id,
+    name: assignment.routineName,
+    archived: assignment.routineArchived,
+    notes: assignment.notes
+  }));
 
   return (
-    <>
-      <section className="rounded-md border bg-card p-4 shadow-soft">
+    <section className="rounded-xl border bg-card p-4 shadow-soft sm:p-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="font-semibold">Manage assigned routines</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Pausing removes a routine from {clientName}&apos;s active workout
-            list without deleting workout history or assignment notes.
-          </p>
+          <h2 className="font-semibold">Routines</h2>
+          <p className="mt-1 text-sm text-muted-foreground">Pause or resume several routine assignments without removing history.</p>
         </div>
+        <div className="flex flex-wrap items-center gap-2 text-xs">
+          <span className="rounded-full bg-success/10 px-2.5 py-1 text-success">{active.length} active</span>
+          <span className="rounded-full bg-muted px-2.5 py-1 text-muted-foreground">{paused.length} paused</span>
+          {action}
+        </div>
+      </div>
 
-        <div className="mt-4 grid gap-4 xl:grid-cols-2">
-          <form action={pauseAction} className="grid content-start gap-3 rounded-lg border p-3">
-            <div className="flex items-center gap-2">
-              <PauseCircle className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
-              <h3 className="text-sm font-semibold">Pause active routines</h3>
-            </div>
-            <RoutineMultiSelect
-              key={pauseVersion}
-              name="assignment_ids"
-              options={activeAssignments.map((assignment) => ({
-                id: assignment.id,
-                name: assignment.routineName
-              }))}
-              placeholder="Select active routines"
-              emptyMessage="There are no active routines to pause."
-              onSelectionChange={setPauseSelection}
-            />
-            <p className="text-xs text-muted-foreground">
-              Paused routines can be resumed at any time.
-            </p>
-            <Button
-              type="button"
-              variant="secondary"
-              className="w-fit"
-              disabled={!pauseSelection.length}
-              onClick={() => setIsPauseModalOpen(true)}
-            >
-              {pauseSelection.length === 1
-                ? "Pause 1 routine"
-                : `Pause ${pauseSelection.length} routines`}
-            </Button>
-
-            <Modal
-              open={isPauseModalOpen}
-              onOpenChange={setIsPauseModalOpen}
-              title={`Pause ${pauseSelection.length === 1 ? "this routine" : "these routines"}?`}
-              description={`They will no longer appear in ${clientName}'s active workout list.`}
-            >
-              <div className="grid gap-4 p-5">
-                <ul className="max-h-48 space-y-2 overflow-y-auto rounded-lg border bg-muted/30 p-3 text-sm">
-                  {selectedPauseNames.map((name) => (
-                    <li key={name}>{name}</li>
-                  ))}
-                </ul>
-                <p className="text-sm text-muted-foreground">
-                  Existing workout history and coach notes will be preserved.
-                </p>
-                {pauseState.status === "error" ? (
-                  <p
-                    className="rounded-md border border-destructive/25 bg-destructive/5 px-3 py-2 text-sm text-destructive"
-                    role="alert"
-                  >
-                    {pauseState.message}
-                  </p>
-                ) : null}
-                <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    onClick={() => setIsPauseModalOpen(false)}
-                  >
-                    Keep active
-                  </Button>
-                  <SubmitButton
-                    variant="secondary"
-                    pendingLabel="Pausing routines..."
-                  >
-                    {pauseSelection.length === 1
-                      ? "Pause routine"
-                      : `Pause ${pauseSelection.length} routines`}
-                  </SubmitButton>
-                </div>
+      <div className="mt-5 grid gap-5 xl:grid-cols-2">
+        <form action={pauseAction} className="grid content-start gap-3">
+          <h3 className="flex items-center gap-2 text-sm font-semibold">
+            <PauseCircle className="h-4 w-4 text-muted-foreground" aria-hidden="true" /> Active routines
+          </h3>
+          <AssignmentSelectionList
+            label="Select active routines to pause"
+            items={activeItems}
+            selectedIds={pauseSelection}
+            onSelectionChange={setPauseSelection}
+            emptyMessage="No active routines."
+          />
+          <Button type="button" variant="secondary" className="w-fit" disabled={!pauseSelection.length} onClick={() => setPauseModalOpen(true)}>
+            Pause {pauseSelection.length || "selected"} {pauseSelection.length === 1 ? "routine" : "routines"}
+          </Button>
+          <Modal
+            open={pauseModalOpen}
+            onOpenChange={setPauseModalOpen}
+            title={`Pause ${pauseSelection.length === 1 ? "this routine" : "these routines"}?`}
+            description={`They will no longer appear in ${clientName}'s active workout list.`}
+          >
+            <div className="grid gap-4 p-5">
+              <ul className="max-h-48 space-y-2 overflow-y-auto rounded-lg border bg-muted/30 p-3 text-sm">
+                {active.filter((assignment) => pauseSelection.includes(assignment.id)).map((assignment) => (
+                  <li key={assignment.id}>{assignment.routineName}</li>
+                ))}
+              </ul>
+              <p className="text-sm text-muted-foreground">Workout history and assignment notes will be preserved.</p>
+              {pauseState.status === "error" ? <p className="text-sm text-destructive" role="alert">{pauseState.message}</p> : null}
+              <div className="flex flex-col-reverse gap-2 border-t pt-4 sm:flex-row sm:justify-end">
+                <Button type="button" variant="ghost" onClick={() => setPauseModalOpen(false)}>Keep active</Button>
+                <SubmitButton variant="secondary" pendingLabel="Pausing routines...">Pause {pauseSelection.length} {pauseSelection.length === 1 ? "routine" : "routines"}</SubmitButton>
               </div>
-            </Modal>
-          </form>
-
-          <form action={resumeAction} className="grid content-start gap-3 rounded-lg border p-3">
-            <div className="flex items-center gap-2">
-              <PlayCircle className="h-4 w-4 text-primary" aria-hidden="true" />
-              <h3 className="text-sm font-semibold">Resume paused routines</h3>
             </div>
-            <RoutineMultiSelect
-              key={resumeVersion}
-              name="assignment_ids"
-              options={pausedAssignments.map((assignment) => ({
-                id: assignment.id,
-                name: assignment.routineName,
-                disabled: assignment.routineArchived,
-                disabledLabel: assignment.routineArchived
-                  ? "Routine archived"
-                  : undefined
-              }))}
-              placeholder="Select paused routines"
-              emptyMessage="There are no paused routines to resume."
-              onSelectionChange={setResumeSelection}
-            />
-            <p className="text-xs text-muted-foreground">
-              Archived routine templates must be restored before they can be resumed.
-            </p>
-            {resumeState.status === "error" ? (
-              <p
-                className="rounded-md border border-destructive/25 bg-destructive/5 px-3 py-2 text-sm text-destructive"
-                role="alert"
-              >
-                {resumeState.message}
-              </p>
-            ) : null}
-            <SubmitButton
-              className="w-fit"
-              disabled={!resumeSelection.length}
-              pendingLabel="Resuming routines..."
-            >
-              {resumeSelection.length === 1
-                ? "Resume 1 routine"
-                : `Resume ${resumeSelection.length} routines`}
-            </SubmitButton>
-          </form>
-        </div>
-      </section>
+          </Modal>
+        </form>
 
-      <Toast
-        open={isPauseToastOpen}
-        onOpenChange={setIsPauseToastOpen}
-        title={pauseState.updatedCount === 1 ? "Routine paused" : "Routines paused"}
-        description={`${pauseState.updatedCount ?? 0} ${
-          pauseState.updatedCount === 1 ? "routine is" : "routines are"
-        } no longer shown in ${clientName}'s active workout list.`}
-        variant="success"
-      />
-      <Toast
-        open={isResumeToastOpen}
-        onOpenChange={setIsResumeToastOpen}
-        title={resumeState.updatedCount === 1 ? "Routine resumed" : "Routines resumed"}
-        description={`${resumeState.updatedCount ?? 0} ${
-          resumeState.updatedCount === 1 ? "routine is" : "routines are"
-        } active again for ${clientName}.`}
-        variant="success"
-      />
-    </>
+        <form action={resumeAction} className="grid content-start gap-3">
+          <h3 className="flex items-center gap-2 text-sm font-semibold">
+            <PlayCircle className="h-4 w-4 text-primary" aria-hidden="true" /> Paused routines
+          </h3>
+          <AssignmentSelectionList
+            label="Select paused routines to resume"
+            items={pausedItems}
+            selectedIds={resumeSelection}
+            onSelectionChange={setResumeSelection}
+            disabledArchived
+            emptyMessage="No paused routines."
+          />
+          {resumeState.status === "error" ? <p className="text-sm text-destructive" role="alert">{resumeState.message}</p> : null}
+          <SubmitButton className="w-fit" disabled={!resumeSelection.length} pendingLabel="Resuming routines...">
+            Resume {resumeSelection.length || "selected"} {resumeSelection.length === 1 ? "routine" : "routines"}
+          </SubmitButton>
+        </form>
+      </div>
+
+      <Toast open={pauseToastOpen} onOpenChange={setPauseToastOpen} title={pauseState.updatedCount === 1 ? "Routine paused" : "Routines paused"} description={`${pauseState.updatedCount ?? 0} ${pauseState.updatedCount === 1 ? "routine is" : "routines are"} no longer active for ${clientName}.`} />
+      <Toast open={resumeToastOpen} onOpenChange={setResumeToastOpen} title={resumeState.updatedCount === 1 ? "Routine resumed" : "Routines resumed"} description={`${resumeState.updatedCount ?? 0} ${resumeState.updatedCount === 1 ? "routine is" : "routines are"} active again for ${clientName}.`} />
+    </section>
   );
 }

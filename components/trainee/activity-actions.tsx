@@ -47,7 +47,7 @@ export function ActivityActions({
   const [open, setOpen] = useState(false);
   const [toastOpen, setToastOpen] = useState(false);
   const [state, formAction] = useActionState(
-    createActivityLogAction.bind(null, assignmentId),
+    createActivityLogAction.bind(null, assignmentId, "redirect"),
     initialState
   );
 

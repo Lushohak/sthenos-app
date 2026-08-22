@@ -67,13 +67,14 @@ test("@smoke a coach customizes a one-time Activity and a trainee logs its requi
   await expect(page.getByText("Target: 70 min")).toBeVisible();
 
   await page.goto(`/dashboard/clients/${client!.id}`);
+  await page.getByRole("button", { name: "Assign Activity", exact: true }).click();
   await page.locator('select[name="activity_id"]').selectOption(activity!.id);
   await page.locator('select[name="assignment_mode"]').selectOption("one_time");
   await page.getByLabel("Planned date").fill(plannedFor);
   await page.locator('input[name="target_duration_minutes"]').fill("75");
   await page.locator('input[name="target_distance_km"]').fill("6");
   await page.locator('input[name="target_perceived_intensity"]').fill("8");
-  await page.getByRole("button", { name: "Assign Activity" }).click();
+  await page.getByRole("button", { name: "Assign activity", exact: true }).click();
   await expect(page.getByText("Activity assigned")).toBeVisible();
 
   const { data: assignment, error: assignmentError } = await admin
@@ -120,7 +121,7 @@ test("@smoke a coach customizes a one-time Activity and a trainee logs its requi
   expect(log).toEqual(expect.objectContaining({ duration_minutes: 90, distance_km: null, perceived_intensity: 9, notes: "High-tempo match." }));
   expect(completedAssignment?.status).toBe("completed");
 
-  await page.goto(`/dashboard/clients/${client!.id}`);
+  await page.goto(`/dashboard/clients/${client!.id}?tab=history`);
   await expect(page.getByText(/90 min \/ 75 min target/)).toBeVisible();
   await page.goto("/dashboard/progress");
   await expect(page.getByRole("heading", { name: "Activity summary · Last 30 days" })).toBeVisible();
@@ -287,10 +288,9 @@ test("@smoke a coach bulk assigns, pauses, archives, restores, and resumes an Ac
 
   const firstClient = clients!.find((client) => client.name === clientNames[0])!;
   await page.goto(`/dashboard/clients/${firstClient.id}`);
-  await page.getByRole("button", { name: "Select active Activities" }).click();
   await page.getByRole("checkbox", { name: activityName }).check();
-  await page.getByRole("button", { name: "Done" }).click();
   await page.getByRole("button", { name: "Pause 1 Activity" }).click();
+  await page.getByRole("button", { name: "Pause 1 Activity" }).last().click();
   await expect(page.getByText("Activity paused")).toBeVisible();
 
   await page.goto(`/dashboard/activities/${activity!.id}`);
@@ -300,9 +300,7 @@ test("@smoke a coach bulk assigns, pauses, archives, restores, and resumes an Ac
   await expect(page.getByText(`${activityName} archived`)).toBeVisible();
 
   await page.goto(`/dashboard/clients/${firstClient.id}`);
-  await page.getByRole("button", { name: "Select paused Activities" }).click();
   await expect(page.getByRole("checkbox", { name: new RegExp(activityName) })).toBeDisabled();
-  await page.getByRole("button", { name: "Select paused Activities" }).click();
 
   await page.goto(`/dashboard/activities/${activity!.id}`);
   await page.getByRole("button", { name: "Restore Activity" }).click();
@@ -311,13 +309,13 @@ test("@smoke a coach bulk assigns, pauses, archives, restores, and resumes an Ac
   await expect(page.getByText(`${activityName} restored`)).toBeVisible();
 
   await page.goto(`/dashboard/clients/${firstClient.id}`);
-  await page.getByRole("button", { name: "Select paused Activities" }).click();
   await page.getByRole("checkbox", { name: activityName }).check();
-  await page.getByRole("button", { name: "Done" }).click();
   await page.getByRole("button", { name: "Resume 1 Activity" }).click();
   await expect(page.getByText("Activity resumed")).toBeVisible();
 
-  await page.getByRole("button", { name: "Log Activity" }).click();
+  await page.getByRole("link", { name: "History" }).click();
+  await page.getByRole("button", { name: "Log training" }).first().click();
+  await page.getByRole("tab", { name: "Activity" }).click();
   await page.getByLabel("Distance (km)").fill("4.25");
   await page.getByLabel("Activity notes").fill("Logged by coach");
   await page.getByRole("button", { name: "Complete Activity" }).click();

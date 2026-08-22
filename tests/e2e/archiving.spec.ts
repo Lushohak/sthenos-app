@@ -50,7 +50,7 @@ test("@smoke a coach can archive and restore clients and routines without losing
   expect(assignmentError, assignmentError?.message).toBeNull();
 
   await logIn(page, coach);
-  await page.goto(`/dashboard/clients/${client!.id}`);
+  await page.goto(`/dashboard/clients/${client!.id}?tab=account`);
   await page.getByRole("button", { name: "Archive client" }).click();
   await expect(
     page.getByRole("heading", { name: `Archive ${clientName}?` })
@@ -77,8 +77,9 @@ test("@smoke a coach can archive and restore clients and routines without losing
 
   await page.getByRole("link", { name: "Archived clients" }).click();
   await page.getByRole("link", { name: clientName }).click();
+  await page.getByRole("link", { name: "Account" }).click();
   await expect(
-    page.getByText("Restore this client to send account invitations")
+    page.getByText("Restore this client before sending account invitations")
   ).toBeVisible();
   await page.getByRole("button", { name: "Restore client" }).click();
   await expect(page.getByText(`${clientName} restored`)).toBeVisible();

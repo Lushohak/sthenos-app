@@ -77,7 +77,7 @@ test("@smoke a coach can permanently delete a trainee account and its client dat
   expect(activityLogError, activityLogError?.message).toBeNull();
 
   await logIn(page, coach);
-  await page.goto(`/dashboard/clients/${client!.id}`);
+  await page.goto(`/dashboard/clients/${client!.id}?tab=account`);
   await page.getByRole("button", { name: "Delete trainee account" }).click();
   await expect(
     page.getByRole("heading", { name: `Delete ${clientName}?` })

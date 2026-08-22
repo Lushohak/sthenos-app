@@ -5,6 +5,57 @@ import {
   waitForEmail
 } from "./support/mailpit";
 
+test("a new client is invited automatically unless the coach opts out", async ({
+  admin,
+  page,
+  users
+}) => {
+  const coach = await users.create("coach");
+  const traineeName = `Automatic ${uniqueValue("trainee")}`;
+  const traineeEmail = `${uniqueValue("automatic-invite")}@example.test`;
+  await clearMailpit();
+
+  await logIn(page, coach);
+  await page.goto("/dashboard/clients/new");
+  await page.getByLabel("Name").fill(traineeName);
+  await page.getByLabel("Email").fill(traineeEmail);
+  await expect(page.getByRole("checkbox", { name: /Send account invitation after creation/ })).toBeChecked();
+  await page.getByRole("button", { name: "Create client" }).click();
+
+  await expect(page).toHaveURL(/\/dashboard\/clients\/.+tab=account.+invite=sent/);
+  await expect(page.getByText("Invite email sent.")).toBeVisible();
+  const { data: client, error } = await admin
+    .from("clients")
+    .select("client_user_id, invited_at")
+    .eq("coach_id", coach.id)
+    .eq("email", traineeEmail)
+    .single();
+  expect(error, error?.message).toBeNull();
+  expect(client?.client_user_id).toBeTruthy();
+  expect(client?.invited_at).toBeTruthy();
+  users.track(client!.client_user_id!, "trainee");
+
+  const email = await waitForEmail(traineeEmail);
+  expect(email.Subject).toBe("Your invitation to join Sthenos");
+
+  const deferredName = `Deferred ${uniqueValue("trainee")}`;
+  const deferredEmail = `${uniqueValue("deferred-invite")}@example.test`;
+  await page.goto("/dashboard/clients/new");
+  await page.getByLabel("Name").fill(deferredName);
+  await page.getByLabel("Email").fill(deferredEmail);
+  await page.getByRole("checkbox", { name: "Send account invitation after creation" }).uncheck();
+  await page.getByRole("button", { name: "Create client" }).click();
+  await expect(page).toHaveURL(/\/dashboard\/clients$/);
+  const { data: deferredClient, error: deferredError } = await admin
+    .from("clients")
+    .select("client_user_id, invited_at")
+    .eq("coach_id", coach.id)
+    .eq("email", deferredEmail)
+    .single();
+  expect(deferredError, deferredError?.message).toBeNull();
+  expect(deferredClient).toEqual({ client_user_id: null, invited_at: null });
+});
+
 test("@smoke coach invite lets a trainee finish account setup", async ({
   admin,
   browser,
@@ -31,9 +82,10 @@ test("@smoke coach invite lets a trainee finish account setup", async ({
   await clearMailpit();
 
   await logIn(page, coach);
-  await page.goto(`/dashboard/clients/${client!.id}`);
+  await page.goto(`/dashboard/clients/${client!.id}?tab=account`);
   await page.getByRole("button", { name: "Send invite" }).click();
   await expect(page).toHaveURL(/invite=sent/);
+  await expect(page).toHaveURL(/tab=account/);
   await expect(page.getByText("Invite email sent.")).toBeVisible();
 
   const { data: invitedClient, error: invitedClientError } = await admin

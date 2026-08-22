@@ -14,6 +14,7 @@ type BodyProgressFormProps = {
   clientId: string;
   today: string;
   submitter: "coach" | "trainee";
+  onSuccess?: () => void;
 };
 
 const initialState: BodyProgressState = {
@@ -24,7 +25,8 @@ const initialState: BodyProgressState = {
 export function BodyProgressForm({
   clientId,
   today,
-  submitter
+  submitter,
+  onSuccess
 }: BodyProgressFormProps) {
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
@@ -38,9 +40,10 @@ export function BodyProgressForm({
     if (state.status !== "success") return;
     formRef.current?.reset();
     setToastOpen(true);
+    onSuccess?.();
     const timeout = window.setTimeout(() => router.refresh(), 1200);
     return () => window.clearTimeout(timeout);
-  }, [router, state]);
+  }, [onSuccess, router, state]);
 
   return (
     <>

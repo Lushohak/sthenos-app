@@ -12,6 +12,10 @@ type InviteAuthError = {
   status?: number;
 };
 
+function inviteStatusDestination(clientId: string, status: string) {
+  return `/dashboard/clients/${clientId}?tab=account&invite=${encodeURIComponent(status)}`;
+}
+
 function getInviteErrorStatus(error: InviteAuthError) {
   if (error.status === 429) return "rate-limited";
 
@@ -59,7 +63,7 @@ function redirectInviteError(
     message: error.message
   });
 
-  redirect(`/dashboard/clients/${clientId}?invite=${status}`);
+  redirect(inviteStatusDestination(clientId, status));
 }
 
 async function getAuthRedirectUrl() {
@@ -125,7 +129,7 @@ export async function inviteTraineeAction(clientId: string) {
   }
 
   if (!client.email) {
-    redirect(`/dashboard/clients/${clientId}?invite=missing-email`);
+    redirect(inviteStatusDestination(clientId, "missing-email"));
   }
 
   const traineeId = client.id;
@@ -134,7 +138,7 @@ export async function inviteTraineeAction(clientId: string) {
   const redirectTo = await getAuthRedirectUrl();
 
   if (client.invitation_accepted_at) {
-    redirect(`/dashboard/clients/${clientId}?invite=active`);
+    redirect(inviteStatusDestination(clientId, "active"));
   }
 
   async function sendSetupEmail(authUserId: string): Promise<never> {
@@ -159,7 +163,7 @@ export async function inviteTraineeAction(clientId: string) {
     }
 
     revalidatePath(`/dashboard/clients/${clientId}`);
-    redirect(`/dashboard/clients/${clientId}?invite=resent`);
+    redirect(inviteStatusDestination(clientId, "resent"));
   }
 
   if (client.client_user_id) {
@@ -174,7 +178,7 @@ export async function inviteTraineeAction(clientId: string) {
       !authUserData.user?.email ||
       authUserData.user.email.toLowerCase() !== client.email.toLowerCase()
     ) {
-      redirect(`/dashboard/clients/${clientId}?invite=account-mismatch`);
+      redirect(inviteStatusDestination(clientId, "account-mismatch"));
     }
 
     await sendSetupEmail(client.client_user_id);
@@ -264,5 +268,5 @@ export async function inviteTraineeAction(clientId: string) {
   }
 
   revalidatePath(`/dashboard/clients/${clientId}`);
-  redirect(`/dashboard/clients/${clientId}?invite=sent`);
+  redirect(inviteStatusDestination(clientId, "sent"));
 }

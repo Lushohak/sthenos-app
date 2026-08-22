@@ -20,6 +20,7 @@ test("@smoke coach assignment becomes a trainee workout and coach history", asyn
   await page.getByLabel("Name").fill(traineeName);
   await page.getByLabel("Email").fill(trainee.email);
   await page.getByLabel("Goal").fill("Complete the E2E workout");
+  await page.getByRole("checkbox", { name: "Send account invitation after creation" }).uncheck();
   await page.getByRole("button", { name: "Create client" }).click();
   await expect(page).toHaveURL(/\/dashboard\/clients$/);
   await expect(page.getByRole("link", { name: traineeName })).toBeVisible();
@@ -114,7 +115,7 @@ test("@smoke coach assignment becomes a trainee workout and coach history", asyn
     await traineeContext.close();
   }
 
-  await page.goto(`/dashboard/clients/${client!.id}`);
+  await page.goto(`/dashboard/clients/${client!.id}?tab=history`);
   await expect(page.getByText(completionNote)).toBeVisible();
   await expect(page.getByText(routineName).last()).toBeVisible();
 });

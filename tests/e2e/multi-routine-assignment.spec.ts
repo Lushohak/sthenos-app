@@ -61,17 +61,19 @@ test("@smoke a coach can batch assign, pause, and resume a trainee's routines", 
 
   await logIn(page, coach);
   await page.goto(`/dashboard/clients/${client!.id}`);
-  await page.getByRole("button", { name: "Select routines" }).click();
+  await page.getByRole("button", { name: "Assign routines" }).click();
+  const assignmentDialog = page.getByRole("dialog", { name: "Assign training" });
+  await assignmentDialog.getByRole("button", { name: "Select routines" }).click();
 
-  const alreadyAssignedCheckbox = page.getByRole("checkbox", {
+  const alreadyAssignedCheckbox = assignmentDialog.getByRole("checkbox", {
     name: new RegExp(routineNames[0])
   });
   await expect(alreadyAssignedCheckbox).toBeDisabled();
 
-  const strengthCheckbox = page.getByRole("checkbox", {
+  const strengthCheckbox = assignmentDialog.getByRole("checkbox", {
     name: routineNames[1]
   });
-  const conditioningCheckbox = page.getByRole("checkbox", {
+  const conditioningCheckbox = assignmentDialog.getByRole("checkbox", {
     name: routineNames[2]
   });
 
@@ -82,10 +84,10 @@ test("@smoke a coach can batch assign, pause, and resume a trainee's routines", 
   await conditioningCheckbox.check();
   await expect(conditioningCheckbox).toBeChecked();
   await expect(
-    page.getByRole("listbox", { name: "Routine options" })
+    assignmentDialog.getByRole("listbox", { name: "Routine options" })
   ).toBeVisible();
 
-  await page.getByRole("button", { name: "Assign 2 routines" }).click();
+  await assignmentDialog.getByRole("button", { name: "Assign 2 routines" }).click();
   await expect(page.getByText("Routines assigned")).toBeVisible();
   await expect(
     page.getByText(`2 routines are now assigned to ${clientName}.`)
@@ -103,7 +105,6 @@ test("@smoke a coach can batch assign, pause, and resume a trainee's routines", 
   expect(assignmentsError, assignmentsError?.message).toBeNull();
   expect(assignments).toHaveLength(3);
 
-  await page.getByRole("button", { name: "Select active routines" }).click();
   await page
     .getByRole("checkbox", { name: routineNames[1] })
     .check();
@@ -113,7 +114,6 @@ test("@smoke a coach can batch assign, pause, and resume a trainee's routines", 
   await page
     .getByRole("checkbox", { name: routineNames[2] })
     .check();
-  await page.getByRole("button", { name: "Done" }).click();
   await page.getByRole("button", { name: "Pause 2 routines" }).click();
   await expect(
     page.getByRole("heading", { name: "Pause these routines?" })
@@ -122,7 +122,7 @@ test("@smoke a coach can batch assign, pause, and resume a trainee's routines", 
     .getByRole("button", { name: "Pause 2 routines" })
     .last()
     .click();
-  await expect(page.getByText("Routines paused")).toBeVisible();
+  await expect(page.getByText("Routines paused", { exact: true })).toBeVisible();
 
   const { data: pausedAssignments, error: pausedAssignmentsError } = await admin
     .from("client_routines")
@@ -154,16 +154,14 @@ test("@smoke a coach can batch assign, pause, and resume a trainee's routines", 
       traineePage.getByRole("heading", { name: routineNames[2] })
     ).not.toBeVisible();
 
-    await page.getByRole("button", { name: "Select paused routines" }).click();
     await page
       .getByRole("checkbox", { name: routineNames[1] })
       .check();
     await page
       .getByRole("checkbox", { name: routineNames[2] })
       .check();
-    await page.getByRole("button", { name: "Done" }).click();
     await page.getByRole("button", { name: "Resume 2 routines" }).click();
-    await expect(page.getByText("Routines resumed")).toBeVisible();
+    await expect(page.getByText("Routines resumed", { exact: true })).toBeVisible();
 
     await traineePage.reload();
     await expect(

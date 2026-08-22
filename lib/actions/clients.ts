@@ -5,6 +5,9 @@ import { redirect } from "next/navigation";
 import { getUserOrRedirect } from "@/lib/auth";
 import { calculateAge } from "@/lib/client-profile";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { inviteTraineeAction } from "@/lib/actions/trainee-invites";
+import type { ClientLoggingOptionsResult } from "@/lib/client-roster";
+import type { ActivityMetricKey } from "@/lib/activities";
 import type { Database } from "@/types/database";
 
 export type DeleteClientAccountResult =
@@ -90,28 +93,46 @@ export type UpdateRoutineAssignmentsState = {
   updatedCount?: number;
 };
 
+export type WorkoutLogState = {
+  status: "idle" | "success" | "error";
+  message: string;
+};
+
 export async function createClientAction(formData: FormData) {
   const { supabase, user } = await getUserOrRedirect();
+  const email = optionalString(formData, "email");
+  const status = String(formData.get("status") ?? "active") as "active" | "paused" | "archived";
 
-  const { error } = await supabase.from("clients").insert({
-    coach_id: user.id,
-    name: String(formData.get("name") ?? "").trim(),
-    email: optionalString(formData, "email"),
-    gender: optionalClientGender(formData),
-    date_of_birth: optionalDateOfBirth(formData),
-    height_cm: optionalHeightCm(formData),
-    goal: optionalString(formData, "goal"),
-    notes: optionalString(formData, "notes"),
-    status: String(formData.get("status") ?? "active") as "active" | "paused" | "archived"
-  });
+  const { data: client, error } = await supabase
+    .from("clients")
+    .insert({
+      coach_id: user.id,
+      name: String(formData.get("name") ?? "").trim(),
+      email,
+      gender: optionalClientGender(formData),
+      date_of_birth: optionalDateOfBirth(formData),
+      height_cm: optionalHeightCm(formData),
+      goal: optionalString(formData, "goal"),
+      notes: optionalString(formData, "notes"),
+      status
+    })
+    .select("id")
+    .single();
 
   if (error) throw new Error(error.message);
 
   revalidatePath("/dashboard/clients");
+  if (formData.get("send_invite") === "on" && email && status !== "archived") {
+    await inviteTraineeAction(client.id);
+  }
   redirect("/dashboard/clients");
 }
 
-export async function updateClientAction(clientId: string, formData: FormData) {
+export async function updateClientAction(
+  clientId: string,
+  returnTo: string | undefined,
+  formData: FormData
+) {
   const { supabase } = await getUserOrRedirect();
 
   const { error } = await supabase
@@ -131,7 +152,8 @@ export async function updateClientAction(clientId: string, formData: FormData) {
   if (error) throw new Error(error.message);
 
   revalidatePath("/dashboard/clients");
-  redirect(`/dashboard/clients/${clientId}`);
+  const clientPath = `/dashboard/clients/${clientId}`;
+  redirect(returnTo?.startsWith(clientPath) ? returnTo : clientPath);
 }
 
 export async function archiveClientAction(
@@ -362,9 +384,14 @@ export async function deleteClientAccountAction(
   return { success: true, clientName: client.name };
 }
 
-export async function createWorkoutLogAction(clientId: string, formData: FormData) {
+export async function createWorkoutLogAction(
+  clientId: string,
+  _previousState: WorkoutLogState,
+  formData: FormData
+): Promise<WorkoutLogState> {
   const { supabase, user } = await getUserOrRedirect();
-  const routineId = optionalString(formData, "routine_id");
+  const requestedRoutineId = optionalString(formData, "routine_id");
+  const routineId = requestedRoutineId === "unstructured" ? null : requestedRoutineId;
   const { data: client } = await supabase
     .from("clients")
     .select("id")
@@ -373,7 +400,12 @@ export async function createWorkoutLogAction(clientId: string, formData: FormDat
     .neq("status", "archived")
     .maybeSingle();
 
-  if (!client) throw new Error("Archived clients cannot receive new workout logs.");
+  if (!client) {
+    return {
+      status: "error",
+      message: "Archived clients cannot receive new workout logs."
+    };
+  }
 
   const { error } = await supabase.from("workout_logs").insert({
     coach_id: user.id,
@@ -384,10 +416,102 @@ export async function createWorkoutLogAction(clientId: string, formData: FormDat
     notes: optionalString(formData, "notes")
   });
 
-  if (error) throw new Error(error.message);
+  if (error) {
+    return {
+      status: "error",
+      message: "We could not save this workout. Please try again."
+    };
+  }
 
   revalidatePath(`/dashboard/clients/${clientId}`);
+  revalidatePath("/dashboard/clients");
   revalidatePath("/dashboard");
+
+  return {
+    status: "success",
+    message: "Workout added to the trainee's training history."
+  };
+}
+
+export async function getClientLoggingOptionsAction(
+  clientId: string
+): Promise<ClientLoggingOptionsResult> {
+  const { supabase, user } = await getUserOrRedirect();
+  const { data: client, error: clientError } = await supabase
+    .from("clients")
+    .select("id, name")
+    .eq("id", clientId)
+    .eq("coach_id", user.id)
+    .neq("status", "archived")
+    .maybeSingle();
+
+  if (clientError || !client) {
+    return {
+      success: false,
+      message: "This trainee is unavailable or no longer belongs to your active roster."
+    };
+  }
+
+  const [routineResult, activityResult] = await Promise.all([
+    supabase
+      .from("client_routines")
+      .select("id, routine_id, workout_routines(name)")
+      .eq("coach_id", user.id)
+      .eq("client_id", clientId)
+      .eq("status", "active")
+      .order("assigned_at", { ascending: false }),
+    supabase
+      .from("client_activities")
+      .select("id, tracked_metrics, required_metrics, targets, activities(name)")
+      .eq("coach_id", user.id)
+      .eq("client_id", clientId)
+      .eq("status", "active")
+      .order("assigned_at", { ascending: false })
+  ]);
+
+  if (routineResult.error || activityResult.error) {
+    return {
+      success: false,
+      message: "We could not load this trainee's training options. Please try again."
+    };
+  }
+
+  const routineAssignments = (routineResult.data ?? []).flatMap((assignment) => {
+    const routine = Array.isArray(assignment.workout_routines)
+      ? assignment.workout_routines[0]
+      : assignment.workout_routines;
+    return routine
+      ? [{
+          id: assignment.id,
+          routineId: assignment.routine_id,
+          routineName: routine.name
+        }]
+      : [];
+  }).sort((left, right) => left.routineName.localeCompare(right.routineName));
+
+  const activityAssignments = (activityResult.data ?? []).flatMap((assignment) => {
+    const activity = Array.isArray(assignment.activities)
+      ? assignment.activities[0]
+      : assignment.activities;
+    return activity
+      ? [{
+          id: assignment.id,
+          activityName: activity.name,
+          trackedMetrics: assignment.tracked_metrics as ActivityMetricKey[],
+          requiredMetrics: assignment.required_metrics as ActivityMetricKey[],
+          targets: assignment.targets
+        }]
+      : [];
+  }).sort((left, right) => left.activityName.localeCompare(right.activityName));
+
+  return {
+    success: true,
+    options: {
+      client,
+      routineAssignments,
+      activityAssignments
+    }
+  };
 }
 
 export async function assignRoutineAction(

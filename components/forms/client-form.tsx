@@ -7,10 +7,11 @@ type Client = Database["public"]["Tables"]["clients"]["Row"];
 
 type ClientFormProps = {
   client?: Client;
+  returnTo?: string;
 };
 
-export function ClientForm({ client }: ClientFormProps) {
-  const action = client ? updateClientAction.bind(null, client.id) : createClientAction;
+export function ClientForm({ client, returnTo }: ClientFormProps) {
+  const action = client ? updateClientAction.bind(null, client.id, returnTo) : createClientAction;
   const today = new Date().toISOString().slice(0, 10);
   const minimumBirthDate = new Date(`${today}T12:00:00Z`);
   minimumBirthDate.setUTCFullYear(minimumBirthDate.getUTCFullYear() - 120);
@@ -68,13 +69,30 @@ export function ClientForm({ client }: ClientFormProps) {
       <Field label="Notes">
         <Textarea name="notes" defaultValue={client?.notes ?? ""} />
       </Field>
+      {!client ? (
+        <div className="flex items-start gap-3 rounded-xl border bg-card p-4 shadow-soft">
+          <input
+            id="send-invite-on-create"
+            name="send_invite"
+            type="checkbox"
+            defaultChecked
+            aria-describedby="send-invite-on-create-description"
+            className="mt-0.5 h-4 w-4 shrink-0 accent-primary"
+          />
+          <span>
+            <label htmlFor="send-invite-on-create" className="block text-sm font-semibold text-foreground">Send account invitation after creation</label>
+            <span id="send-invite-on-create-description" className="mt-1 block text-sm text-muted-foreground">
+              When an email is provided, Sthenos will immediately send the trainee their password setup link. Uncheck this if you want to invite them later.
+            </span>
+          </span>
+        </div>
+      ) : null}
       <SubmitButton
         className="w-fit"
         pendingLabel={client ? "Saving client..." : "Creating client..."}
       >
         {client ? "Save client" : "Create client"}
       </SubmitButton>
-      {/* TODO: Add client login invitation and portal access controls here. */}
     </form>
   );
 }

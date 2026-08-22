@@ -46,19 +46,19 @@ test("@smoke a coach creates and edits client demographics with age derived from
     age: null
   }));
 
-  await page.goto(`/dashboard/clients/${client!.id}`);
-  const profile = page.getByRole("heading", { name: "Profile" }).locator("..");
+  await page.goto(`/dashboard/clients/${client!.id}?tab=account`);
+  const profile = page.getByRole("heading", { name: "Profile details" }).locator("../..");
   await expect(profile.getByText("Male", { exact: true })).toBeVisible();
   await expect(profile.getByText("Apr 10, 1995", { exact: true })).toBeVisible();
   await expect(profile.getByText("178.5 cm", { exact: true })).toBeVisible();
   await expect(profile.getByText(String(ageFor(initialBirthday)), { exact: true })).toBeVisible();
 
-  await page.getByRole("link", { name: "Edit client" }).click();
+  await page.getByRole("link", { name: "Edit client" }).first().click();
   await page.getByLabel("Gender").selectOption("prefer_not_to_say");
   await page.getByLabel("Date of birth").fill(updatedBirthday);
   await page.getByLabel("Height (cm)").fill("165.4");
   await page.getByRole("button", { name: "Save client" }).click();
-  await expect(page).toHaveURL(`/dashboard/clients/${client!.id}`);
+  await expect(page).toHaveURL(`/dashboard/clients/${client!.id}?tab=account`);
 
   await expect(profile.getByText("Prefer not to say", { exact: true })).toBeVisible();
   await expect(profile.getByText("Aug 7, 1992", { exact: true })).toBeVisible();

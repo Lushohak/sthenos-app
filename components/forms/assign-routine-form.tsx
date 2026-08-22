@@ -18,6 +18,7 @@ type AssignRoutineFormProps = {
   clientName: string;
   routines: Routine[];
   assignedRoutineIds?: string[];
+  onSuccess?: () => void;
 };
 
 const initialState: AssignRoutineState = {
@@ -31,7 +32,8 @@ export function AssignRoutineForm({
   clientId,
   clientName,
   routines,
-  assignedRoutineIds = []
+  assignedRoutineIds = [],
+  onSuccess
 }: AssignRoutineFormProps) {
   const formRef = useRef<HTMLFormElement>(null);
   const [isToastOpen, setIsToastOpen] = useState(false);
@@ -49,7 +51,8 @@ export function AssignRoutineForm({
     setSelectionVersion((current) => current + 1);
     setSelectedCount(0);
     setIsToastOpen(true);
-  }, [state]);
+    onSuccess?.();
+  }, [onSuccess, state]);
 
   const routineOptions = routines.map((routine) => ({
     id: routine.id,

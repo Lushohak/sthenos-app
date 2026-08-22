@@ -16,6 +16,7 @@ type AssignActivityFormProps = {
   clientName: string;
   activities: Activity[];
   assignedActivityIds: string[];
+  onSuccess?: () => void;
 };
 
 const initialState: AssignActivityState = {
@@ -29,7 +30,8 @@ export function AssignActivityForm({
   clientId,
   clientName,
   activities,
-  assignedActivityIds
+  assignedActivityIds,
+  onSuccess
 }: AssignActivityFormProps) {
   const formRef = useRef<HTMLFormElement>(null);
   const available = useMemo(
@@ -49,7 +51,8 @@ export function AssignActivityForm({
     if (state.status !== "success") return;
     formRef.current?.reset();
     setIsToastOpen(true);
-  }, [state]);
+    onSuccess?.();
+  }, [onSuccess, state]);
 
   useEffect(() => {
     if (available.some((item) => item.id === activityId)) return;
