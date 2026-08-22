@@ -1,6 +1,6 @@
 # Sthenos feature inventory
 
-Last reviewed: August 11, 2026
+Last reviewed: August 19, 2026
 
 This document describes functionality currently present in Sthenos. A
 **Routine** is an exercise-based workout. An **Activity** is a separately
@@ -26,11 +26,23 @@ limit trainees to their linked profile, assignments, and logs.
 - [x] Record optional gender, date of birth, and height while creating or
   editing a trainee, with age calculated automatically from the birthday.
 - [x] Invite trainees by email and resend password setup links.
+- [x] Send the account invitation automatically after client creation by
+  default, with an opt-out for coaches who want to invite the trainee later.
 - [x] Show friendly invitation errors and request loading states.
 - [x] Record body measurements and completed exercise-based workouts on behalf
   of a trainee, with measurement history showing who submitted each entry.
 - [x] Review each trainee's assignments, combined training history, Activity
   insights, and body-progress history.
+- [x] Manage each trainee through a sticky, URL-backed workspace with focused
+  Training plan, Overview, Progress, History, and Account views.
+- [x] Search and filter the responsive client roster, sort by recent training
+  or inactivity, and see the latest completed Workout or Activity at a glance.
+- [x] Log structured or unstructured Workouts and assigned Activities directly
+  from the roster through one lazy-loaded dialog without losing roster filters.
+- [x] Create and assign a reusable Activity from the training-log dropdown,
+  choose its tracked results, and continue directly into logging it.
+- [x] Assign and log training or add measurements through focused dialogs, and
+  bulk pause or resume assignments from compact Routine and Activity lists.
 
 ### Exercise library
 

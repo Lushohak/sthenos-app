@@ -456,6 +456,13 @@ export type Database = {
     };
     Views: {};
     Functions: {
+      get_coach_client_last_trained: {
+        Args: Record<string, never>;
+        Returns: {
+          client_id: string;
+          last_trained_on: string | null;
+        }[];
+      };
       get_trainee_social_feed: {
         Args: Record<string, never>;
         Returns: {

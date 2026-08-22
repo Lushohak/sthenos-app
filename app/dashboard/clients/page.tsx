@@ -1,10 +1,11 @@
-import Link from "next/link";
+import { ClientRoster } from "@/components/clients/client-roster";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { LinkButton } from "@/components/ui/button";
-import { Table, Td, Th } from "@/components/ui/table";
 import { getUserOrRedirect } from "@/lib/auth";
-import { formatDate } from "@/lib/utils";
 import { ArchiveStatusToast } from "@/components/ui/archive-status-toast";
+import type { Database } from "@/types/database";
+
+type LastTrainedEntry = Database["public"]["Functions"]["get_coach_client_last_trained"]["Returns"][number];
 
 type PageProps = {
   searchParams?: Promise<{
@@ -12,6 +13,9 @@ type PageProps = {
     archived?: string;
     restored?: string;
     view?: string;
+    q?: string;
+    status?: string;
+    sort?: string;
   }>;
 };
 
@@ -31,11 +35,21 @@ export default async function ClientsPage({ searchParams }: PageProps) {
     ? clientRequest.eq("status", "archived")
     : clientRequest.neq("status", "archived");
 
-  const { data: clients, error } = await clientRequest.order("created_at", {
-    ascending: false
-  });
+  const [clientResult, lastTrainedResult] = await Promise.all([
+    clientRequest.order("name", { ascending: true }),
+    supabase.rpc("get_coach_client_last_trained")
+  ]);
 
-  if (error) throw new Error(error.message);
+  if (clientResult.error) throw new Error(clientResult.error.message);
+  if (lastTrainedResult.error) throw new Error(lastTrainedResult.error.message);
+  const lastTrainedByClient = new Map(
+    ((lastTrainedResult.data ?? []) as LastTrainedEntry[]).map((entry) => [entry.client_id, entry.last_trained_on])
+  );
+  const clients = (clientResult.data ?? []).map((client) => ({
+    ...client,
+    lastTrainedOn: lastTrainedByClient.get(client.id) ?? null
+  }));
+  const today = new Date().toISOString().slice(0, 10);
 
   return (
     <>
@@ -48,20 +62,6 @@ export default async function ClientsPage({ searchParams }: PageProps) {
         }
         action={<LinkButton href="/dashboard/clients/new">New client</LinkButton>}
       />
-      <div className="mb-4 flex flex-wrap gap-2" aria-label="Client views">
-        <LinkButton
-          href="/dashboard/clients"
-          variant={showArchived ? "ghost" : "secondary"}
-        >
-          Active clients
-        </LinkButton>
-        <LinkButton
-          href="/dashboard/clients?view=archived"
-          variant={showArchived ? "secondary" : "ghost"}
-        >
-          Archived clients
-        </LinkButton>
-      </div>
       {deletedClientName ? (
         <div
           className="mb-4 rounded-md border border-success/40 bg-success/5 px-4 py-3 text-sm text-success shadow-soft"
@@ -70,39 +70,7 @@ export default async function ClientsPage({ searchParams }: PageProps) {
           {deletedClientName} and their account were permanently deleted.
         </div>
       ) : null}
-      <Table>
-        <thead>
-          <tr>
-            <Th>Name</Th>
-            <Th>Email</Th>
-            <Th>Goal</Th>
-            <Th>Status</Th>
-            <Th>Created</Th>
-          </tr>
-        </thead>
-        <tbody>
-          {clients?.map((client) => (
-            <tr key={client.id}>
-              <Td>
-                <Link className="font-medium text-info hover:text-info/80" href={`/dashboard/clients/${client.id}`}>
-                  {client.name}
-                </Link>
-              </Td>
-              <Td>{client.email ?? "Not set"}</Td>
-              <Td>{client.goal ?? "Not set"}</Td>
-              <Td className="capitalize">{client.status}</Td>
-              <Td>{formatDate(client.created_at)}</Td>
-            </tr>
-          ))}
-          {!clients?.length ? (
-            <tr>
-              <Td colSpan={5}>
-                {showArchived ? "No archived clients." : "No active clients yet."}
-              </Td>
-            </tr>
-          ) : null}
-        </tbody>
-      </Table>
+      <ClientRoster clients={clients} archived={showArchived} today={today} />
       {archivedClientName ? (
         <ArchiveStatusToast
           itemName={archivedClientName}
