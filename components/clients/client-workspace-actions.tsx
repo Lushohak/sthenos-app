@@ -16,7 +16,8 @@ import { Toast } from "@/components/ui/toast";
 import { parseActivityTargets } from "@/lib/activities";
 import type {
   LoggableActivityAssignment,
-  RoutineLogAssignment
+  RoutineLogAssignment,
+  ScheduledLogOption
 } from "@/lib/client-roster";
 import { cn } from "@/lib/utils";
 import type { Database } from "@/types/database";
@@ -147,6 +148,7 @@ export function ClientTrainingLogDialog({
   clientName,
   routineAssignments,
   activityAssignments,
+  scheduledSessions = [],
   today,
   triggerLabel,
   triggerVariant,
@@ -156,6 +158,7 @@ export function ClientTrainingLogDialog({
   clientName: string;
   routineAssignments: RoutineLogAssignment[];
   activityAssignments: LoggableActivityAssignment[];
+  scheduledSessions?: ScheduledLogOption[];
   today: string;
 }) {
   const router = useRouter();
@@ -190,6 +193,7 @@ export function ClientTrainingLogDialog({
           clientId={clientId}
           routineAssignments={routineAssignments}
           activityAssignments={activityAssignments}
+          scheduledSessions={scheduledSessions}
           today={today}
           onSuccess={handleSuccess}
         />
@@ -202,6 +206,7 @@ export function TrainingLogDialogContent({
   clientId,
   routineAssignments,
   activityAssignments,
+  scheduledSessions = [],
   today,
   requireExplicitRoutineChoice = false,
   activityCompletionBehavior = "redirect",
@@ -210,6 +215,7 @@ export function TrainingLogDialogContent({
   clientId: string;
   routineAssignments: RoutineLogAssignment[];
   activityAssignments: LoggableActivityAssignment[];
+  scheduledSessions?: ScheduledLogOption[];
   today: string;
   requireExplicitRoutineChoice?: boolean;
   activityCompletionBehavior?: "redirect" | "return";
@@ -219,11 +225,16 @@ export function TrainingLogDialogContent({
   const [availableActivities, setAvailableActivities] = useState(activityAssignments);
   const [activityId, setActivityId] = useState(activityAssignments[0]?.id ?? "");
   const [showQuickCreate, setShowQuickCreate] = useState(false);
+  const [scheduledActivityId, setScheduledActivityId] = useState("");
   const [quickCreateToast, setQuickCreateToast] = useState("");
   const selectedActivity = useMemo(
     () => availableActivities.find((assignment) => assignment.id === activityId),
     [availableActivities, activityId]
   );
+  const scheduledActivities = scheduledSessions.filter((session) =>
+    session.kind === "activity" && availableActivities.some((assignment) => assignment.id === session.activityAssignmentId)
+  );
+  const selectedScheduledActivity = scheduledActivities.find((session) => session.id === scheduledActivityId);
   const handleActivityCreated = useCallback((
     assignment: LoggableActivityAssignment,
     message: string
@@ -253,10 +264,27 @@ export function TrainingLogDialogContent({
               assignments={routineAssignments}
               today={today}
               requireExplicitRoutineChoice={requireExplicitRoutineChoice}
+              scheduledSessions={scheduledSessions}
               onSuccess={onSuccess}
             />
           ) : (
             <div className="grid gap-4">
+              {scheduledActivities.length ? (
+                <Field label="Scheduled session" hint="Optional — selecting one marks that calendar session completed.">
+                  <Select value={scheduledActivityId} onChange={(event) => {
+                    const nextId = event.target.value;
+                    setScheduledActivityId(nextId);
+                    const session = scheduledActivities.find((item) => item.id === nextId);
+                    if (session?.activityAssignmentId) {
+                      setActivityId(session.activityAssignmentId);
+                      setShowQuickCreate(false);
+                    }
+                  }}>
+                    <option value="">Do not link a scheduled session</option>
+                    {scheduledActivities.map((session) => <option key={session.id} value={session.id}>{session.scheduledOn} · {session.title}</option>)}
+                  </Select>
+                </Field>
+              ) : null}
               <Field label="Activity">
                 <Select value={showQuickCreate ? CREATE_ACTIVITY_VALUE : activityId} onChange={(event) => {
                   if (event.target.value === CREATE_ACTIVITY_VALUE) {
@@ -288,6 +316,8 @@ export function TrainingLogDialogContent({
                   requiredMetrics={selectedActivity.requiredMetrics}
                   targets={parseActivityTargets(selectedActivity.targets)}
                   today={today}
+                  scheduleOccurrenceId={selectedScheduledActivity?.id ?? null}
+                  scheduledOn={selectedScheduledActivity?.scheduledOn}
                   completionBehavior={activityCompletionBehavior}
                   onSuccess={onSuccess}
                 />

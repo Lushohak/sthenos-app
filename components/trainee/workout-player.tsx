@@ -49,6 +49,7 @@ export type WorkoutPlayerExercise = {
 
 type WorkoutPlayerProps = {
   assignmentId: string;
+  scheduleOccurrenceId?: string | null;
   routineId: string;
   routineName: string;
   routineDescription: string | null;
@@ -103,6 +104,7 @@ function formatTimer(totalSeconds: number) {
 
 export function WorkoutPlayer({
   assignmentId,
+  scheduleOccurrenceId = null,
   routineId,
   routineName,
   routineDescription,
@@ -197,7 +199,7 @@ export function WorkoutPlayer({
   const [localToday, setLocalToday] = useState(today);
   const [trainingDate, setTrainingDate] = useState(today);
   const [actionState, formAction, isPending] = useActionState(
-    createTraineeWorkoutLogAction.bind(null, assignmentId),
+    createTraineeWorkoutLogAction.bind(null, assignmentId, scheduleOccurrenceId),
     initialActionState
   );
 

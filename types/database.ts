@@ -48,6 +48,9 @@ export type Database = {
           peer_activity_sharing_enabled: boolean;
           invited_at: string | null;
           invitation_accepted_at: string | null;
+          timezone: string | null;
+          timezone_confirmed_at: string | null;
+          email_workout_reminders_enabled: boolean;
           created_at: string;
           updated_at: string;
         };
@@ -66,6 +69,9 @@ export type Database = {
           peer_activity_sharing_enabled?: boolean;
           invited_at?: string | null;
           invitation_accepted_at?: string | null;
+          timezone?: string | null;
+          timezone_confirmed_at?: string | null;
+          email_workout_reminders_enabled?: boolean;
         };
         Update: Partial<Database["public"]["Tables"]["clients"]["Insert"]>;
         Relationships: [
@@ -242,6 +248,7 @@ export type Database = {
           trained_on: string;
           notes: string | null;
           duration_minutes: number | null;
+          schedule_occurrence_id: string | null;
           created_at: string;
         };
         Insert: {
@@ -251,6 +258,7 @@ export type Database = {
           trained_on: string;
           notes?: string | null;
           duration_minutes?: number | null;
+          schedule_occurrence_id?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["workout_logs"]["Insert"]>;
         Relationships: [
@@ -364,6 +372,7 @@ export type Database = {
           calories_burned: number | null;
           perceived_intensity: number | null;
           notes: string | null;
+          schedule_occurrence_id: string | null;
           created_at: string;
         };
         Insert: {
@@ -378,6 +387,7 @@ export type Database = {
           calories_burned?: number | null;
           perceived_intensity?: number | null;
           notes?: string | null;
+          schedule_occurrence_id?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["activity_logs"]["Insert"]>;
         Relationships: [
@@ -453,6 +463,124 @@ export type Database = {
           }
         ];
       };
+      training_schedule_series: {
+        Row: {
+          id: string;
+          coach_id: string;
+          client_id: string;
+          weekday: number;
+          local_time: string;
+          kind: Database["public"]["Enums"]["training_schedule_kind"];
+          routine_assignment_id: string | null;
+          activity_assignment_id: string | null;
+          open_title: string | null;
+          notes: string | null;
+          reminder_enabled: boolean;
+          starts_on: string;
+          ends_on: string | null;
+          created_by: string;
+          updated_by: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          coach_id: string;
+          client_id: string;
+          weekday: number;
+          local_time: string;
+          kind: Database["public"]["Enums"]["training_schedule_kind"];
+          routine_assignment_id?: string | null;
+          activity_assignment_id?: string | null;
+          open_title?: string | null;
+          notes?: string | null;
+          reminder_enabled?: boolean;
+          starts_on: string;
+          ends_on?: string | null;
+          created_by: string;
+          updated_by: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["training_schedule_series"]["Insert"]>;
+        Relationships: [];
+      };
+      training_schedule_occurrences: {
+        Row: {
+          id: string;
+          series_id: string;
+          coach_id: string;
+          client_id: string;
+          scheduled_on: string;
+          scheduled_at: string;
+          local_time: string;
+          timezone: string;
+          kind: Database["public"]["Enums"]["training_schedule_kind"];
+          routine_assignment_id: string | null;
+          activity_assignment_id: string | null;
+          title: string;
+          notes: string | null;
+          reminder_enabled: boolean;
+          status: Database["public"]["Enums"]["training_schedule_status"];
+          skip_reason: string | null;
+          created_by: string;
+          updated_by: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          series_id: string;
+          coach_id: string;
+          client_id: string;
+          scheduled_on: string;
+          scheduled_at: string;
+          local_time: string;
+          timezone: string;
+          kind: Database["public"]["Enums"]["training_schedule_kind"];
+          routine_assignment_id?: string | null;
+          activity_assignment_id?: string | null;
+          title: string;
+          notes?: string | null;
+          reminder_enabled?: boolean;
+          status?: Database["public"]["Enums"]["training_schedule_status"];
+          skip_reason?: string | null;
+          created_by: string;
+          updated_by: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["training_schedule_occurrences"]["Insert"]>;
+        Relationships: [];
+      };
+      training_reminder_deliveries: {
+        Row: {
+          id: string;
+          coach_id: string;
+          client_id: string;
+          target_date: string;
+          occurrence_ids: string[];
+          recipient_email: string;
+          status: Database["public"]["Enums"]["reminder_delivery_status"];
+          provider_message_id: string | null;
+          attempts: number;
+          last_error: string | null;
+          sent_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          coach_id: string;
+          client_id: string;
+          target_date: string;
+          occurrence_ids?: string[];
+          recipient_email: string;
+          status?: Database["public"]["Enums"]["reminder_delivery_status"];
+          provider_message_id?: string | null;
+          attempts?: number;
+          last_error?: string | null;
+          sent_at?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["training_reminder_deliveries"]["Insert"]>;
+        Relationships: [];
+      };
     };
     Views: {};
     Functions: {
@@ -495,6 +623,46 @@ export type Database = {
         };
         Returns: string;
       };
+      refresh_training_schedule_occurrences: {
+        Args: Record<string, never>;
+        Returns: undefined;
+      };
+      update_training_schedule_preferences: {
+        Args: {
+          target_client_id: string;
+          target_timezone: string;
+          target_reminders_enabled: boolean;
+        };
+        Returns: undefined;
+      };
+      resolve_training_schedule_time: {
+        Args: {
+          target_date: string;
+          target_time: string;
+          target_timezone: string;
+        };
+        Returns: string;
+      };
+      complete_scheduled_workout: {
+        Args: {
+          target_occurrence_id: string;
+          target_duration_minutes?: number | null;
+          target_notes?: string | null;
+        };
+        Returns: string;
+      };
+      complete_scheduled_activity: {
+        Args: {
+          target_occurrence_id: string;
+          target_duration_minutes?: number | null;
+          target_distance_km?: number | null;
+          target_elevation_gain_m?: number | null;
+          target_calories_burned?: number | null;
+          target_perceived_intensity?: number | null;
+          target_notes?: string | null;
+        };
+        Returns: string;
+      };
       bulk_create_and_add_routine_exercises: {
         Args: {
           target_routine_id: string;
@@ -521,6 +689,9 @@ export type Database = {
       activity_assignment_mode: "repeatable" | "one_time";
       routine_lifecycle_status: "draft" | "published";
       routine_phase: "warmup" | "main" | "cooldown";
+      training_schedule_kind: "routine" | "activity" | "open";
+      training_schedule_status: "planned" | "completed" | "skipped" | "missed" | "cancelled";
+      reminder_delivery_status: "pending" | "sent" | "failed" | "suppressed";
     };
     CompositeTypes: {};
   };

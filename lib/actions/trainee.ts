@@ -79,6 +79,7 @@ export async function completeTraineeSetupAction(formData: FormData) {
 
 export async function createTraineeWorkoutLogAction(
   assignmentId: string,
+  scheduleOccurrenceId: string | null,
   _previousState: TraineeWorkoutLogState,
   formData: FormData
 ): Promise<TraineeWorkoutLogState> {
@@ -121,14 +122,20 @@ export async function createTraineeWorkoutLogAction(
     };
   }
 
-  const { error } = await supabase.from("workout_logs").insert({
-    coach_id: assignment.coach_id,
-    client_id: client.id,
-    routine_id: assignment.routine_id,
-    trained_on: trainedOn,
-    duration_minutes: durationMinutes,
-    notes: optionalString(formData, "notes")
-  });
+  const { error } = scheduleOccurrenceId
+    ? await supabase.rpc("complete_scheduled_workout", {
+        target_occurrence_id: scheduleOccurrenceId,
+        target_duration_minutes: durationMinutes,
+        target_notes: optionalString(formData, "notes")
+      })
+    : await supabase.from("workout_logs").insert({
+        coach_id: assignment.coach_id,
+        client_id: client.id,
+        routine_id: assignment.routine_id,
+        trained_on: trainedOn,
+        duration_minutes: durationMinutes,
+        notes: optionalString(formData, "notes")
+      });
 
   if (error) {
     return {
@@ -139,6 +146,7 @@ export async function createTraineeWorkoutLogAction(
 
   revalidatePath("/trainee");
   revalidatePath("/trainee/progress");
+  revalidatePath("/trainee/schedule");
   revalidatePath(`/dashboard/clients/${client.id}`);
   revalidatePath("/dashboard");
   revalidatePath("/dashboard/progress");

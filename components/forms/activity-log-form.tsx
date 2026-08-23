@@ -24,6 +24,8 @@ type ActivityLogFormProps = {
   targets: ActivityTargets;
   today: string;
   completionBehavior?: "redirect" | "return";
+  scheduleOccurrenceId?: string | null;
+  scheduledOn?: string;
   onSuccess?: () => void;
 };
 
@@ -41,12 +43,14 @@ export function ActivityLogForm({
   targets,
   today,
   completionBehavior = "redirect",
+  scheduleOccurrenceId = null,
+  scheduledOn,
   onSuccess
 }: ActivityLogFormProps) {
   const formRef = useRef<HTMLFormElement>(null);
   const [toastOpen, setToastOpen] = useState(false);
   const [state, formAction] = useActionState(
-    createActivityLogAction.bind(null, assignmentId, completionBehavior),
+    createActivityLogAction.bind(null, assignmentId, completionBehavior, scheduleOccurrenceId),
     initialState
   );
 
@@ -61,7 +65,7 @@ export function ActivityLogForm({
     <>
       <form ref={formRef} action={formAction} className="grid gap-4 rounded-xl border bg-card p-4 shadow-soft sm:p-5">
         <Field label="Activity date">
-          <Input name="performed_on" type="date" defaultValue={today} max={today} required />
+          <Input name="performed_on" type="date" defaultValue={scheduledOn ?? today} max={today} readOnly={Boolean(scheduleOccurrenceId)} required />
         </Field>
         {ACTIVITY_METRICS.filter((metric) => trackedMetrics.includes(metric.key)).map((metric) => {
           const target = targets[metric.key];

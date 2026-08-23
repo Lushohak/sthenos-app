@@ -24,10 +24,20 @@ export type LoggableActivityAssignment = {
   targets: Json | null;
 };
 
+export type ScheduledLogOption = {
+  id: string;
+  kind: "routine" | "activity" | "open";
+  scheduledOn: string;
+  title: string;
+  routineAssignmentId: string | null;
+  activityAssignmentId: string | null;
+};
+
 export type ClientLoggingOptions = {
   client: Pick<Client, "id" | "name">;
   routineAssignments: RoutineLogAssignment[];
   activityAssignments: LoggableActivityAssignment[];
+  scheduledSessions: ScheduledLogOption[];
 };
 
 export type ClientLoggingOptionsResult =

@@ -8,7 +8,7 @@ import {
 import { Field, Input, Select, Textarea } from "@/components/ui/field";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { Toast } from "@/components/ui/toast";
-import type { RoutineLogAssignment } from "@/lib/client-roster";
+import type { RoutineLogAssignment, ScheduledLogOption } from "@/lib/client-roster";
 
 type Props = {
   clientId: string;
@@ -16,6 +16,7 @@ type Props = {
   today?: string;
   requireExplicitRoutineChoice?: boolean;
   onSuccess?: () => void;
+  scheduledSessions?: ScheduledLogOption[];
 };
 
 const initialState: WorkoutLogState = {
@@ -28,13 +29,19 @@ export function WorkoutLogForm({
   assignments,
   today = new Date().toISOString().slice(0, 10),
   requireExplicitRoutineChoice = false,
-  onSuccess
+  onSuccess,
+  scheduledSessions = []
 }: Props) {
   const formRef = useRef<HTMLFormElement>(null);
   const [toastOpen, setToastOpen] = useState(false);
   const [state, formAction] = useActionState(
     createWorkoutLogAction.bind(null, clientId),
     initialState
+  );
+  const [trainedOn, setTrainedOn] = useState(today);
+  const matchingScheduled = scheduledSessions.filter((session) =>
+    session.scheduledOn === trainedOn &&
+    (session.kind === "open" || assignments.some((assignment) => assignment.id === session.routineAssignmentId))
   );
   const defaultRoutineId = assignments.length === 1
     ? assignments[0].routineId
@@ -54,7 +61,7 @@ export function WorkoutLogForm({
     <form ref={formRef} action={formAction} className="grid gap-4 rounded-md border bg-card p-4 shadow-soft">
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Date trained">
-          <Input name="trained_on" type="date" defaultValue={today} max={today} required />
+          <Input name="trained_on" type="date" value={trainedOn} onChange={(event) => setTrainedOn(event.target.value)} max={today} required />
         </Field>
         <Field label="Routine">
           <Select name="routine_id" defaultValue={defaultRoutineId} required={requireExplicitRoutineChoice && assignments.length > 1}>
@@ -70,6 +77,14 @@ export function WorkoutLogForm({
           </Select>
         </Field>
       </div>
+      {matchingScheduled.length ? (
+        <Field label="Scheduled session" hint="Optional — selecting one marks that calendar session completed.">
+          <Select name="schedule_occurrence_id" defaultValue="">
+            <option value="">Do not link a scheduled session</option>
+            {matchingScheduled.map((session) => <option key={session.id} value={session.id}>{session.title}</option>)}
+          </Select>
+        </Field>
+      ) : null}
       <Field label="Duration in minutes" hint="Optional">
         <Input
           name="duration_minutes"

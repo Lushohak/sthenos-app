@@ -43,12 +43,14 @@ function routinePhaseRank(value: unknown) {
 export default async function TraineeDashboardPage({ searchParams }: PageProps) {
   const activityCompleted = (await searchParams)?.activityCompleted;
   const { supabase, client } = await getTraineeOrRedirect();
+  await supabase.rpc("refresh_training_schedule_occurrences");
   const [
     { data: routineAssignments },
     { data: activityAssignments },
     { data: workoutLogs, count: workoutCount },
     { data: activityLogs, count: activityCount },
-    { data: progress }
+    { data: progress },
+    { data: scheduleOutcomes }
   ] = await Promise.all([
     supabase
       .from("client_routines")
@@ -79,6 +81,13 @@ export default async function TraineeDashboardPage({ searchParams }: PageProps) 
       .select("*")
       .eq("client_id", client.id)
       .order("recorded_on", { ascending: false })
+      .limit(8),
+    supabase
+      .from("training_schedule_occurrences")
+      .select("id, scheduled_on, title, status, skip_reason, updated_at")
+      .eq("client_id", client.id)
+      .in("status", ["skipped", "missed"])
+      .order("scheduled_on", { ascending: false })
       .limit(8)
   ]);
 
@@ -113,7 +122,16 @@ export default async function TraineeDashboardPage({ searchParams }: PageProps) 
           values[key] === undefined ? [] : [formatActivityMetricResult(key, values[key]!, targets)]
         ).join(" · ") || "Completed"
       };
-    })
+    }),
+    ...(scheduleOutcomes ?? []).map((item) => ({
+      id: item.id,
+      type: "Scheduled" as const,
+      date: item.scheduled_on,
+      createdAt: item.updated_at,
+      name: item.title,
+      notes: item.skip_reason,
+      results: item.status === "missed" ? "Missed" : "Skipped"
+    }))
   ]
     .sort((a, b) => `${b.date}-${b.createdAt}`.localeCompare(`${a.date}-${a.createdAt}`))
     .slice(0, 8);

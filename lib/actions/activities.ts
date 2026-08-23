@@ -498,6 +498,7 @@ export async function updateActivityAssignmentsStatusAction(
 export async function createActivityLogAction(
   assignmentId: string,
   completionBehavior: "redirect" | "return",
+  scheduleOccurrenceId: string | null,
   _previousState: ActivityLogState,
   formData: FormData
 ): Promise<ActivityLogState> {
@@ -537,16 +538,26 @@ export async function createActivityLogAction(
       return { status: "error", message: `${label} is required.`, completedOneTime: false };
     }
 
-    const { error } = await supabase.rpc("create_assigned_activity_log", {
-      target_assignment_id: assignmentId,
-      target_performed_on: performedOn,
-      target_duration_minutes: values.duration_minutes ?? null,
-      target_distance_km: values.distance_km ?? null,
-      target_elevation_gain_m: values.elevation_gain_m ?? null,
-      target_calories_burned: values.calories_burned ?? null,
-      target_perceived_intensity: values.perceived_intensity ?? null,
-      target_notes: optionalString(formData, "notes")
-    });
+    const { error } = scheduleOccurrenceId
+      ? await supabase.rpc("complete_scheduled_activity", {
+          target_occurrence_id: scheduleOccurrenceId,
+          target_duration_minutes: values.duration_minutes ?? null,
+          target_distance_km: values.distance_km ?? null,
+          target_elevation_gain_m: values.elevation_gain_m ?? null,
+          target_calories_burned: values.calories_burned ?? null,
+          target_perceived_intensity: values.perceived_intensity ?? null,
+          target_notes: optionalString(formData, "notes")
+        })
+      : await supabase.rpc("create_assigned_activity_log", {
+          target_assignment_id: assignmentId,
+          target_performed_on: performedOn,
+          target_duration_minutes: values.duration_minutes ?? null,
+          target_distance_km: values.distance_km ?? null,
+          target_elevation_gain_m: values.elevation_gain_m ?? null,
+          target_calories_burned: values.calories_burned ?? null,
+          target_perceived_intensity: values.perceived_intensity ?? null,
+          target_notes: optionalString(formData, "notes")
+        });
     if (error) throw new Error(error.message);
 
   } catch (error) {

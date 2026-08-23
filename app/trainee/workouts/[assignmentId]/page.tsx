@@ -7,14 +7,16 @@ import { getTraineeOrRedirect } from "@/lib/trainee";
 
 type PageProps = {
   params: Promise<{ assignmentId: string }>;
+  searchParams?: Promise<{ schedule?: string }>;
 };
 
 function routinePhaseRank(value: unknown) {
   return value === "warmup" ? 0 : value === "cooldown" ? 2 : 1;
 }
 
-export default async function TraineeWorkoutPage({ params }: PageProps) {
+export default async function TraineeWorkoutPage({ params, searchParams }: PageProps) {
   const { assignmentId } = await params;
+  const scheduleOccurrenceId = (await searchParams)?.schedule ?? null;
   const { supabase, client } = await getTraineeOrRedirect();
   const { data: assignment, error } = await supabase
     .from("client_routines")
@@ -35,6 +37,20 @@ export default async function TraineeWorkoutPage({ params }: PageProps) {
 
   if (!routine) {
     notFound();
+  }
+
+  let scheduledOn: string | null = null;
+  if (scheduleOccurrenceId) {
+    const { data: scheduledOccurrence } = await supabase
+      .from("training_schedule_occurrences")
+      .select("scheduled_on, status")
+      .eq("id", scheduleOccurrenceId)
+      .eq("client_id", client.id)
+      .eq("routine_assignment_id", assignmentId)
+      .in("status", ["planned", "missed"])
+      .maybeSingle();
+    if (!scheduledOccurrence) notFound();
+    scheduledOn = scheduledOccurrence.scheduled_on;
   }
 
   const exercises: WorkoutPlayerExercise[] = [...(routine.routine_exercises ?? [])]
@@ -65,6 +81,7 @@ export default async function TraineeWorkoutPage({ params }: PageProps) {
   return (
     <WorkoutPlayer
       assignmentId={assignment.id}
+      scheduleOccurrenceId={scheduleOccurrenceId}
       routineId={routine.id}
       routineName={routine.name}
       routineDescription={routine.description}
@@ -75,7 +92,7 @@ export default async function TraineeWorkoutPage({ params }: PageProps) {
       routineType={routine.routine_type}
       defaultCycles={routine.default_cycles}
       exercises={exercises}
-      today={new Date().toISOString().slice(0, 10)}
+      today={scheduledOn ?? new Date().toISOString().slice(0, 10)}
     />
   );
 }

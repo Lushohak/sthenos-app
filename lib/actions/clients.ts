@@ -391,6 +391,7 @@ export async function createWorkoutLogAction(
 ): Promise<WorkoutLogState> {
   const { supabase, user } = await getUserOrRedirect();
   const requestedRoutineId = optionalString(formData, "routine_id");
+  const scheduleOccurrenceId = optionalString(formData, "schedule_occurrence_id");
   const routineId = requestedRoutineId === "unstructured" ? null : requestedRoutineId;
   const { data: client } = await supabase
     .from("clients")
@@ -407,14 +408,20 @@ export async function createWorkoutLogAction(
     };
   }
 
-  const { error } = await supabase.from("workout_logs").insert({
-    coach_id: user.id,
-    client_id: clientId,
-    routine_id: routineId,
-    trained_on: String(formData.get("trained_on") ?? new Date().toISOString().slice(0, 10)),
-    duration_minutes: optionalNumber(formData, "duration_minutes"),
-    notes: optionalString(formData, "notes")
-  });
+  const { error } = scheduleOccurrenceId
+    ? await supabase.rpc("complete_scheduled_workout", {
+        target_occurrence_id: scheduleOccurrenceId,
+        target_duration_minutes: optionalNumber(formData, "duration_minutes"),
+        target_notes: optionalString(formData, "notes")
+      })
+    : await supabase.from("workout_logs").insert({
+        coach_id: user.id,
+        client_id: clientId,
+        routine_id: routineId,
+        trained_on: String(formData.get("trained_on") ?? new Date().toISOString().slice(0, 10)),
+        duration_minutes: optionalNumber(formData, "duration_minutes"),
+        notes: optionalString(formData, "notes")
+      });
 
   if (error) {
     return {
@@ -452,7 +459,8 @@ export async function getClientLoggingOptionsAction(
     };
   }
 
-  const [routineResult, activityResult] = await Promise.all([
+  const today = new Date().toISOString().slice(0, 10);
+  const [routineResult, activityResult, scheduleResult] = await Promise.all([
     supabase
       .from("client_routines")
       .select("id, routine_id, workout_routines(name)")
@@ -466,10 +474,18 @@ export async function getClientLoggingOptionsAction(
       .eq("coach_id", user.id)
       .eq("client_id", clientId)
       .eq("status", "active")
-      .order("assigned_at", { ascending: false })
+      .order("assigned_at", { ascending: false }),
+    supabase
+      .from("training_schedule_occurrences")
+      .select("id, kind, scheduled_on, title, routine_assignment_id, activity_assignment_id")
+      .eq("client_id", clientId)
+      .lte("scheduled_on", today)
+      .in("status", ["planned", "missed"])
+      .order("scheduled_on", { ascending: false })
+      .limit(30)
   ]);
 
-  if (routineResult.error || activityResult.error) {
+  if (routineResult.error || activityResult.error || scheduleResult.error) {
     return {
       success: false,
       message: "We could not load this trainee's training options. Please try again."
@@ -504,12 +520,22 @@ export async function getClientLoggingOptionsAction(
       : [];
   }).sort((left, right) => left.activityName.localeCompare(right.activityName));
 
+  const scheduledSessions = (scheduleResult.data ?? []).map((session) => ({
+    id: session.id,
+    kind: session.kind,
+    scheduledOn: session.scheduled_on,
+    title: session.title,
+    routineAssignmentId: session.routine_assignment_id,
+    activityAssignmentId: session.activity_assignment_id
+  }));
+
   return {
     success: true,
     options: {
       client,
       routineAssignments,
-      activityAssignments
+      activityAssignments,
+      scheduledSessions
     }
   };
 }

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Activity, BarChart3, History, LayoutDashboard, UserRound } from "lucide-react";
+import { Activity, BarChart3, CalendarDays, History, LayoutDashboard, UserRound } from "lucide-react";
 import {
   clientWorkspaceHref,
   type ClientWorkspaceTab
@@ -12,6 +12,7 @@ const tabs: Array<{
   icon: typeof Activity;
 }> = [
   { id: "training", label: "Training plan", icon: Activity },
+  { id: "schedule", label: "Schedule", icon: CalendarDays },
   { id: "overview", label: "Overview", icon: LayoutDashboard },
   { id: "progress", label: "Progress", icon: BarChart3 },
   { id: "history", label: "History", icon: History },

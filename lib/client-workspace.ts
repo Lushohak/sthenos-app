@@ -1,5 +1,6 @@
 export const CLIENT_WORKSPACE_TABS = [
   "training",
+  "schedule",
   "overview",
   "progress",
   "history",

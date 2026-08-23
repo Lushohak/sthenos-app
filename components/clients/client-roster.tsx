@@ -293,6 +293,7 @@ export function ClientRoster({ clients, archived, today }: ClientRosterProps) {
             clientId={loggingResult.options.client.id}
             routineAssignments={loggingResult.options.routineAssignments}
             activityAssignments={loggingResult.options.activityAssignments}
+            scheduledSessions={loggingResult.options.scheduledSessions}
             today={today}
             requireExplicitRoutineChoice
             activityCompletionBehavior="return"

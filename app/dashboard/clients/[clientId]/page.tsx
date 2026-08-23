@@ -22,6 +22,7 @@ import {
   TrainingTrendChart
 } from "@/components/progress/analytics-charts";
 import { ProgressRangeSelector } from "@/components/progress/progress-range-selector";
+import { TrainingSchedule } from "@/components/schedule/training-schedule";
 import { LinkButton } from "@/components/ui/button";
 import { Table, Td, Th } from "@/components/ui/table";
 import {
@@ -38,6 +39,7 @@ import {
   parseClientWorkspaceTab
 } from "@/lib/client-workspace";
 import { calculateAge, formatClientGender } from "@/lib/client-profile";
+import type { ScheduledLogOption } from "@/lib/client-roster";
 import {
   createTrainingBuckets,
   filterActivityMetricPoints,
@@ -49,6 +51,8 @@ import {
   type TrainingLogPoint
 } from "@/lib/progress-analytics";
 import { formatDate } from "@/lib/utils";
+import { loadTrainingSchedule } from "@/lib/training-schedule-data";
+import { todayInTimezone } from "@/lib/training-schedule";
 import type { Database } from "@/types/database";
 
 type Routine = Database["public"]["Tables"]["workout_routines"]["Row"];
@@ -115,6 +119,7 @@ export default async function ClientProfilePage({ params, searchParams }: PagePr
   const activeTab = parseClientWorkspaceTab(resolvedSearchParams?.tab);
   const inviteStatus = firstValue(resolvedSearchParams?.invite);
   const activityCompleted = firstValue(resolvedSearchParams?.activityCompleted);
+  const requestedScheduleDate = firstValue(resolvedSearchParams?.date);
   const range = parseProgressRange(resolvedSearchParams?.range, "6m");
   const rangeLabel = progressRangeLabel(range);
   const { supabase, user } = await getUserOrRedirect();
@@ -140,6 +145,16 @@ export default async function ClientProfilePage({ params, searchParams }: PagePr
   let activityLogs: RelatedActivityLog[] = [];
   let progressEntries: ProgressEntry[] = [];
   let accountAssignmentCount = 0;
+  let scheduleData: Awaited<ReturnType<typeof loadTrainingSchedule>> | null = null;
+  let scheduledLogSessions: ScheduledLogOption[] = [];
+  let scheduleHistory: Array<{ id: string; title: string; scheduled_on: string; status: "skipped" | "missed"; skip_reason: string | null }> = [];
+
+  if (activeTab === "schedule") {
+    const focusDate = requestedScheduleDate && /^\d{4}-\d{2}-\d{2}$/.test(requestedScheduleDate)
+      ? requestedScheduleDate
+      : today;
+    scheduleData = await loadTrainingSchedule(supabase, clientId, focusDate);
+  }
 
   if (activeTab === "training") {
     const [routineResult, routineAssignmentResult, activityResult, activityAssignmentResult] = await Promise.all([
@@ -185,16 +200,20 @@ export default async function ClientProfilePage({ params, searchParams }: PagePr
   }
 
   if (activeTab === "history") {
-    const [routineAssignmentResult, activityAssignmentResult, workoutResult, activityLogResult] = await Promise.all([
+    await supabase.rpc("refresh_training_schedule_occurrences");
+    const [routineAssignmentResult, activityAssignmentResult, workoutResult, activityLogResult, scheduleResult] = await Promise.all([
       supabase.from("client_routines").select("*, workout_routines(id, name, archived_at)").eq("coach_id", user.id).eq("client_id", clientId).order("assigned_at", { ascending: false }),
       supabase.from("client_activities").select("*, activities(id, name, archived_at, tracked_metrics, required_metrics, default_targets)").eq("coach_id", user.id).eq("client_id", clientId).eq("status", "active").order("assigned_at", { ascending: false }),
       supabase.from("workout_logs").select("*, workout_routines(name)").eq("coach_id", user.id).eq("client_id", clientId).order("trained_on", { ascending: false }),
-      supabase.from("activity_logs").select("*, activities(name), client_activities(targets)").eq("coach_id", user.id).eq("client_id", clientId).order("performed_on", { ascending: false })
+      supabase.from("activity_logs").select("*, activities(name), client_activities(targets)").eq("coach_id", user.id).eq("client_id", clientId).order("performed_on", { ascending: false }),
+      supabase.from("training_schedule_occurrences").select("id, kind, scheduled_on, title, status, skip_reason, routine_assignment_id, activity_assignment_id").eq("client_id", clientId).lte("scheduled_on", today).in("status", ["planned", "missed", "skipped"]).order("scheduled_on", { ascending: false }).limit(50)
     ]);
     routineAssignments = (routineAssignmentResult.data ?? []) as unknown as RoutineAssignment[];
     activityAssignments = (activityAssignmentResult.data ?? []) as unknown as ActivityAssignment[];
     workoutLogs = (workoutResult.data ?? []) as unknown as RelatedWorkoutLog[];
     activityLogs = (activityLogResult.data ?? []) as unknown as RelatedActivityLog[];
+    scheduledLogSessions = (scheduleResult.data ?? []).filter((item) => item.status === "planned" || item.status === "missed").map((item) => ({ id: item.id, kind: item.kind, scheduledOn: item.scheduled_on, title: item.title, routineAssignmentId: item.routine_assignment_id, activityAssignmentId: item.activity_assignment_id }));
+    scheduleHistory = (scheduleResult.data ?? []).filter((item): item is typeof item & { status: "skipped" | "missed" } => item.status === "skipped" || item.status === "missed").map((item) => ({ id: item.id, title: item.title, scheduled_on: item.scheduled_on, status: item.status, skip_reason: item.skip_reason }));
   }
 
   if (activeTab === "account") {
@@ -234,7 +253,10 @@ export default async function ClientProfilePage({ params, searchParams }: PagePr
       targets: assignment.targets
     }] : [];
   });
-  const history = trainingHistoryItems(workoutLogs, activityLogs);
+  const history = [
+    ...trainingHistoryItems(workoutLogs, activityLogs),
+    ...scheduleHistory.map((item) => ({ id: item.id, type: "Scheduled", date: item.scheduled_on, name: item.title, results: item.status === "missed" ? "Missed" : "Skipped", notes: item.skip_reason }))
+  ].sort((a, b) => b.date.localeCompare(a.date));
 
   const trainingLogs: TrainingLogPoint[] = [
     ...workoutLogs.map((log) => ({ clientId: client.id, date: log.trained_on, type: "workout" as const })),
@@ -274,10 +296,12 @@ export default async function ClientProfilePage({ params, searchParams }: PagePr
   const editHref = `/dashboard/clients/${client.id}/edit?returnTo=${encodeURIComponent(clientWorkspaceHref(client.id, activeTab))}`;
   const headerAction = activeTab === "training"
     ? trainingDialog
+    : activeTab === "schedule"
+      ? null
     : activeTab === "progress" && client.status !== "archived"
       ? <ClientProgressDialog clientId={client.id} clientName={client.name} today={today} triggerLabel="Add measurement" />
       : activeTab === "history" && client.status !== "archived"
-        ? <ClientTrainingLogDialog clientId={client.id} clientName={client.name} routineAssignments={normalizedRoutineAssignments} activityAssignments={loggableActivities} today={today} triggerLabel="Log training" />
+        ? <ClientTrainingLogDialog clientId={client.id} clientName={client.name} routineAssignments={normalizedRoutineAssignments} activityAssignments={loggableActivities} scheduledSessions={scheduledLogSessions} today={today} triggerLabel="Log training" />
         : <LinkButton href={editHref}>Edit client</LinkButton>;
 
   return (
@@ -322,6 +346,30 @@ export default async function ClientProfilePage({ params, searchParams }: PagePr
             ) : null}
           />
         </section>
+      ) : null}
+
+      {activeTab === "schedule" && scheduleData ? (
+        <TrainingSchedule
+          client={{
+            id: client.id,
+            name: client.name,
+            coachId: client.coach_id,
+            status: client.status,
+            timezone: client.timezone,
+            timezoneConfirmedAt: client.timezone_confirmed_at,
+            remindersEnabled: client.email_workout_reminders_enabled
+          }}
+          viewer={{
+            id: user.id,
+            role: "coach",
+            coachName: typeof user.user_metadata.full_name === "string" ? user.user_metadata.full_name : "Coach"
+          }}
+          occurrences={scheduleData.occurrences}
+          routines={scheduleData.routines}
+          activities={scheduleData.activities}
+          initialDate={requestedScheduleDate && /^\d{4}-\d{2}-\d{2}$/.test(requestedScheduleDate) ? requestedScheduleDate : today}
+          localToday={todayInTimezone(client.timezone ?? "UTC")}
+        />
       ) : null}
 
       {activeTab === "overview" ? (
@@ -403,7 +451,7 @@ export default async function ClientProfilePage({ params, searchParams }: PagePr
           <div><h2 id="history-heading" className="text-xl font-semibold">Training history</h2><p className="mt-1 text-sm text-muted-foreground">Completed Routines and Activities in one chronological record.</p></div>
           {client.status === "archived" ? <div className="rounded-xl border border-info/30 bg-info/5 p-4 text-sm text-muted-foreground">History remains available, but new training cannot be logged while this client is archived.</div> : null}
           <div className="rounded-xl border bg-card p-4 shadow-soft sm:p-5">
-            <div className="flex flex-wrap items-center justify-between gap-3"><h3 className="font-semibold">Sessions</h3>{client.status !== "archived" ? <ClientTrainingLogDialog clientId={client.id} clientName={client.name} routineAssignments={normalizedRoutineAssignments} activityAssignments={loggableActivities} today={today} triggerLabel="Log training" triggerVariant="secondary" /> : null}</div>
+            <div className="flex flex-wrap items-center justify-between gap-3"><h3 className="font-semibold">Sessions</h3>{client.status !== "archived" ? <ClientTrainingLogDialog clientId={client.id} clientName={client.name} routineAssignments={normalizedRoutineAssignments} activityAssignments={loggableActivities} scheduledSessions={scheduledLogSessions} today={today} triggerLabel="Log training" triggerVariant="secondary" /> : null}</div>
             <div className="mt-4"><Table><thead><tr><Th>Date</Th><Th>Type</Th><Th>Session</Th><Th>Results</Th><Th>Notes</Th></tr></thead><tbody>
               {history.slice(0, 10).map((item) => <tr key={`${item.type}-${item.id}`}><Td>{formatDate(item.date)}</Td><Td>{item.type}</Td><Td>{item.name}</Td><Td>{item.results}</Td><Td>{item.notes ?? "No notes"}</Td></tr>)}
               {!history.length ? <tr><Td colSpan={5}>No completed training yet.</Td></tr> : null}

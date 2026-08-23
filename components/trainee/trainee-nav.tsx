@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { House, TrendingUp, Users } from "lucide-react";
+import { CalendarDays, House, TrendingUp, Users } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 
 const navigation = [
   { href: "/trainee", label: "Home", icon: House },
+  { href: "/trainee/schedule", label: "Schedule", icon: CalendarDays },
   { href: "/trainee/progress", label: "Progress", icon: TrendingUp },
   { href: "/trainee/peers", label: "Peers", icon: Users }
 ];
