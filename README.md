@@ -3,7 +3,8 @@
 Sthenos is a training-management application for fitness coaches and their
 trainees. Coaches can maintain an exercise library, build exercise-based
 Routines, create measurable Activities such as runs or soccer matches, assign
-them to trainees, and review training and body-progress data. Trainees have a
+them to trainees, plan shared weekly training schedules, and review training
+and body-progress data. Trainees have a
 separate portal where they can perform guided workouts, log Activity results
 and body measurements, review one unified training history, and build friendly
 weekly consistency streaks with peers who share the same coach.
@@ -157,3 +158,15 @@ Example:
 ```text
 NEXT_PUBLIC_SITE_URL=https://sthenos-app.vercel.app
 ```
+
+## Production training reminders
+
+Night-before training summaries are sent by the committed Supabase Edge
+Function rather than Supabase Auth SMTP. Apply the schedule migration, deploy
+`training-reminders`, configure its Resend and application secrets, and create
+a Supabase Cron job that invokes it every 15 minutes. Keep
+`TRAINING_REMINDER_EMAILS_ENABLED=false` until staging delivery has been
+verified.
+
+The deployment commands, required secrets, and Cron endpoint are in
+[`supabase/functions/training-reminders/README.md`](supabase/functions/training-reminders/README.md).

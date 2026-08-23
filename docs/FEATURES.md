@@ -1,6 +1,6 @@
 # Sthenos feature inventory
 
-Last reviewed: August 19, 2026
+Last reviewed: August 21, 2026
 
 This document describes functionality currently present in Sthenos. A
 **Routine** is an exercise-based workout. An **Activity** is a separately
@@ -34,7 +34,7 @@ limit trainees to their linked profile, assignments, and logs.
 - [x] Review each trainee's assignments, combined training history, Activity
   insights, and body-progress history.
 - [x] Manage each trainee through a sticky, URL-backed workspace with focused
-  Training plan, Overview, Progress, History, and Account views.
+  Training plan, Schedule, Overview, Progress, History, and Account views.
 - [x] Search and filter the responsive client roster, sort by recent training
   or inactivity, and see the latest completed Workout or Activity at a glance.
 - [x] Log structured or unstructured Workouts and assigned Activities directly
@@ -79,8 +79,8 @@ exercises cannot currently be restored from the coach UI.
 - [x] Download exercise-based Routines as compact PDFs with uncropped images.
   PDFs preserve phase order and include phase-specific guidance.
 
-Current boundaries: assignments have no recurrence schedule or due date, and
-Routine prescriptions do not yet snapshot the entire template.
+Current boundary: Routine prescriptions do not yet snapshot the entire
+template.
 
 ### Activities
 
@@ -106,8 +106,29 @@ Routine prescriptions do not yet snapshot the entire template.
 - [x] Prevent concurrent one-time submissions from creating duplicate logs.
 
 Current boundaries: units are metric-only; values are manually entered; there
-is no GPS, wearable integration, automatic calorie calculation, recurrence
-schedule, or Activity PDF download.
+is no GPS, wearable integration, automatic calorie calculation, or Activity
+PDF download.
+
+### Collaborative training schedule
+
+- [x] Let coaches and trainees plan active assigned Routines, active assigned
+  Activities, and open workouts in one shared weekly calendar.
+- [x] Support multiple sessions per day, one-time sessions, indefinite weekly
+  recurrence, one-session edits, and this-and-future edits.
+- [x] Provide a responsive seven-day board and compact four-week outlook with
+  URL-addressable focus dates.
+- [x] Confirm an editable IANA timezone and share global and per-session email
+  reminder controls.
+- [x] Skip, restore, cancel, or complete scheduled sessions while retaining
+  authorship and status history.
+- [x] Link scheduled completion atomically to Workout or Activity logs and
+  include missed or skipped sessions in training history.
+- [x] Prepare a branded, idempotent Resend digest through a scheduled Supabase
+  Edge Function, with retry records and an environment kill switch.
+
+Current boundaries: the first version uses weekly recurrence only, keeps an
+eight-week materialized horizon, and does not send schedule-change messages.
+Month-grid editing, push notifications, and SMS are not included.
 
 ### Progress reporting
 
@@ -125,9 +146,8 @@ schedule, or Activity PDF download.
 - [x] Review individual training consistency, selectable body-measurement
   trends, and Activity actual-versus-target charts from each trainee profile.
 
-Current boundary: analytics describe recorded activity rather than prescribed
-adherence because Routines do not yet define an expected weekly frequency.
-Exports and generated reports are not yet available.
+Current boundary: the calendar records prescribed outcomes, but aggregate
+adherence analytics and generated exports are not yet available.
 
 ## Trainee functionality
 
@@ -135,7 +155,8 @@ Exports and generated reports are not yet available.
 
 - [x] Accept a coach invitation, set a password, log in, and enter a
   role-specific portal.
-- [x] Navigate between Home, Progress, and Peers on desktop and mobile.
+- [x] Navigate between Home, Schedule, Progress, and Peers on desktop and
+  mobile.
 
 ### Peers and consistency
 
@@ -220,7 +241,6 @@ deletion, or a coach approval workflow.
 
 ### Training workflows
 
-- [ ] Add assignment calendars, scheduling, and recurrence.
 - [ ] Snapshot exercise-based Routine prescriptions on assignment.
 - [ ] Capture per-exercise loads, completed reps, effort, pain, and personal
   records.

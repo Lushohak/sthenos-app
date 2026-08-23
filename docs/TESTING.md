@@ -142,6 +142,15 @@ opens its real Supabase action link, and completes the trainee setup flow.
 - Turning sharing off hides activity reciprocally while preserving names and
   private self-progress; turning it back on restores the complete history.
 
+### Collaborative training schedule
+
+- A coach confirms the trainee timezone and creates a recurring session from
+  an active Routine assignment.
+- The weekly and four-week views display materialized occurrences and shared
+  notes.
+- The linked trainee reads the same schedule through trainee RLS and sees
+  authorship information.
+
 ## Test organization
 
 ```text
@@ -158,6 +167,7 @@ tests/e2e/
 ├── peers.spec.ts
 ├── progress-analytics.spec.ts
 ├── trainee-progress.spec.ts
+├── training-schedule.spec.ts
 ├── workout-shortcuts.spec.ts
 └── support/
     ├── fixtures.ts
