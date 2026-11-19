@@ -39,10 +39,14 @@ test("@smoke a coach navigates a focused client workspace with URL-backed tabs",
   expect(routineAssignmentError, routineAssignmentError?.message).toBeNull();
   expect(activityAssignmentError, activityAssignmentError?.message).toBeNull();
 
-  await Promise.all([
-    admin.from("workout_logs").insert({ coach_id: coach.id, client_id: client!.id, routine_id: routine!.id, trained_on: "2026-08-10", duration_minutes: 35, notes: "Good session" }),
-    admin.from("body_progress_entries").insert({ coach_id: coach.id, client_id: client!.id, recorded_on: "2026-08-10", body_weight: 76.4 })
+  const recentDate = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const historyResults = await Promise.all([
+    admin.from("workout_logs").insert({ coach_id: coach.id, client_id: client!.id, routine_id: routine!.id, trained_on: recentDate, duration_minutes: 35, notes: "Good session" }),
+    admin.from("body_progress_entries").insert({ coach_id: coach.id, client_id: client!.id, recorded_on: recentDate, body_weight: 76.4 })
   ]);
+  for (const { error } of historyResults) {
+    expect(error, error?.message).toBeNull();
+  }
 
   await logIn(page, coach);
   await page.goto(`/dashboard/clients/${client!.id}`);
