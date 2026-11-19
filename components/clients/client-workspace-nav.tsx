@@ -1,4 +1,6 @@
-import Link from "next/link";
+"use client";
+
+import { PendingLink as Link } from "@/components/ui/pending-link";
 import { Activity, BarChart3, CalendarDays, History, LayoutDashboard, UserRound } from "lucide-react";
 import {
   clientWorkspaceHref,

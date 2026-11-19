@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { PendingLink as Link } from "@/components/ui/pending-link";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { ActivityThumbnail } from "@/components/activities/activity-thumbnail";
 import { LinkButton } from "@/components/ui/button";

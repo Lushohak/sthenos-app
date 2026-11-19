@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { PendingLink as Link } from "@/components/ui/pending-link";
 import { LogOut } from "lucide-react";
 import { SthenosMark } from "@/components/brand/sthenos-logo";
 import { logoutAction } from "@/lib/actions/auth";

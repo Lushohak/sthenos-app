@@ -1,5 +1,5 @@
-import Link from "next/link";
 import type { ButtonHTMLAttributes, AnchorHTMLAttributes } from "react";
+import { PendingLink } from "@/components/ui/pending-link";
 import { cn } from "@/lib/utils";
 
 const styles = {
@@ -35,5 +35,5 @@ export function LinkButton({
   href,
   ...props
 }: LinkButtonProps) {
-  return <Link className={cn(base, styles[variant], className)} href={href} {...props} />;
+  return <PendingLink className={cn(base, styles[variant], className)} href={href} {...props} />;
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { PendingLink as Link } from "@/components/ui/pending-link";
 import { CalendarDays, House, TrendingUp, Users } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";

@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { PendingLink as Link } from "@/components/ui/pending-link";
 import { usePathname, useRouter } from "next/navigation";
 import { Check, ChevronDown, Search, SlidersHorizontal, X } from "lucide-react";
 import { useEffect, useId, useMemo, useRef, useState } from "react";

@@ -103,6 +103,14 @@ const statusStyles = {
   cancelled: "border-border bg-muted text-muted-foreground"
 };
 
+const statusAccentStyles = {
+  planned: "border-l-info",
+  completed: "border-l-success",
+  skipped: "border-l-warning",
+  missed: "border-l-destructive",
+  cancelled: "border-l-border-emphasis"
+};
+
 function formatDay(value: string, long = false) {
   const date = parseDateOnly(value);
   return date ? (long ? longDateFormatter : dateFormatter).format(date) : value;
@@ -365,6 +373,7 @@ function SessionCard({
   routines,
   activities,
   localToday,
+  compact = false,
   onEdit,
   onSuccess
 }: {
@@ -374,11 +383,12 @@ function SessionCard({
   routines: ScheduleRoutineOption[];
   activities: ScheduleActivityOption[];
   localToday: string;
+  compact?: boolean;
   onEdit: () => void;
   onSuccess: (message: string) => void;
 }) {
   const status = effectiveScheduleStatus(occurrence, localToday);
-  const [dialog, setDialog] = useState<"skip" | "cancel" | "complete" | null>(null);
+  const [dialog, setDialog] = useState<"details" | "skip" | "cancel" | "complete" | null>(null);
   const assignment = occurrence.kind === "routine"
     ? routines.find((item) => item.assignmentId === occurrence.routineAssignmentId)
     : activities.find((item) => item.assignmentId === occurrence.activityAssignmentId);
@@ -387,29 +397,63 @@ function SessionCard({
   const canComplete = canChange && occurrence.scheduledOn <= localToday && !unavailable;
   const author = occurrence.updatedBy === client.coachId ? viewer.coachName : client.name;
   const Icon = occurrence.kind === "activity" ? Footprints : Dumbbell;
+  const kindLabel = occurrence.kind === "routine" ? "Routine" : occurrence.kind === "activity" ? "Activity" : "Open workout";
+
+  function handleSuccess(message: string) {
+    setDialog(null);
+    onSuccess(message);
+  }
 
   return (
-    <article className={cn("rounded-lg border bg-card p-3 shadow-soft", status === "cancelled" && "opacity-60")}>
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2"><Icon className="h-4 w-4 text-primary" aria-hidden="true" /><p className="truncate font-semibold">{occurrence.title}</p><span className={cn("rounded-full border px-2 py-0.5 text-[0.68rem] font-semibold capitalize", statusStyles[status])}>{status}</span></div>
-          <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground"><Clock3 className="h-3.5 w-3.5" aria-hidden="true" />{formatScheduleTime(occurrence.localTime)} · {occurrence.isRecurring ? "Weekly" : "One-time"}</p>
+    <article className={cn("w-full min-w-0", status === "cancelled" && "opacity-60")}>
+      <button
+        type="button"
+        className={cn(
+          "group w-full min-w-0 overflow-hidden rounded-md border border-l-[3px] bg-card p-2 text-left shadow-soft transition-[transform,border-color,background-color,box-shadow] duration-150 ease-out hover:-translate-y-0.5 hover:border-border-emphasis hover:bg-elevated hover:shadow-elevated focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transform-none",
+          statusAccentStyles[status]
+        )}
+        aria-label={`Open ${occurrence.title} details`}
+        onClick={() => setDialog("details")}
+      >
+        <div className="flex min-w-0 items-start gap-1.5">
+          <Icon className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" aria-hidden="true" />
+          <div className="min-w-0 flex-1">
+            <p className={cn("line-clamp-2 break-words font-semibold leading-snug", compact ? "text-xs" : "text-sm")} title={occurrence.title}>{occurrence.title}</p>
+            <p className="mt-1 flex flex-wrap items-center gap-x-1 text-[0.68rem] leading-tight text-muted-foreground">
+              <span>{formatScheduleTime(occurrence.localTime)}</span>
+              <span aria-hidden="true">·</span>
+              <span className={cn("font-semibold capitalize", statusStyles[status].split(" ").at(-1))}>{status}</span>
+            </p>
+          </div>
+          {occurrence.reminderEnabled ? <Bell className="h-3.5 w-3.5 shrink-0 text-primary" aria-label="Email reminder enabled" /> : null}
         </div>
-        {occurrence.reminderEnabled ? <Bell className="h-4 w-4 shrink-0 text-primary" aria-label="Email reminder enabled" /> : <BellOff className="h-4 w-4 shrink-0 text-muted-foreground" aria-label="Email reminder disabled" />}
-      </div>
-      {occurrence.notes ? <p className="mt-2 text-sm text-muted-foreground">{occurrence.notes}</p> : null}
-      {occurrence.skipReason ? <p className="mt-2 text-xs text-warning">Reason: {occurrence.skipReason}</p> : null}
-      {unavailable ? <p className="mt-2 rounded bg-warning/10 px-2 py-1 text-xs text-warning">This assignment is paused or unavailable. Reminders and completion are disabled.</p> : null}
-      <p className="mt-2 text-[0.68rem] text-disabled-foreground">Last updated by {author}</p>
-      {canChange ? <div className="mt-3 flex flex-wrap gap-1 border-t pt-2">
-        {canComplete && occurrence.kind === "routine" && viewer.role === "trainee" && occurrence.scheduledOn === localToday ? <LinkButton href={`/trainee/workouts/${occurrence.routineAssignmentId}?schedule=${occurrence.id}`} className="h-8 px-2 text-xs"><Dumbbell className="h-3.5 w-3.5" aria-hidden="true" />Begin workout</LinkButton> : canComplete ? <Button type="button" className="h-8 px-2 text-xs" onClick={() => setDialog("complete")}><CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />Log completed</Button> : null}
-        {status === "planned" ? <><Button type="button" variant="ghost" className="h-8 px-2 text-xs" onClick={onEdit}><Pencil className="h-3.5 w-3.5" aria-hidden="true" />Edit</Button><Button type="button" variant="ghost" className="h-8 px-2 text-xs" onClick={() => setDialog("skip")}><SkipForward className="h-3.5 w-3.5" aria-hidden="true" />Skip</Button></> : null}
-        <Button type="button" variant="ghost" className="h-8 px-2 text-xs" onClick={() => setDialog("cancel")}><Trash2 className="h-3.5 w-3.5" aria-hidden="true" />Remove</Button>
-      </div> : null}
-      {["skipped", "cancelled"].includes(status) && client.status !== "archived" ? <div className="mt-2 border-t pt-2"><RestoreButton clientId={client.id} occurrence={occurrence} onSuccess={onSuccess} /></div> : null}
-      <SessionStatusDialog clientId={client.id} occurrence={occurrence} mode="skip" open={dialog === "skip"} onOpenChange={(open) => setDialog(open ? "skip" : null)} onSuccess={onSuccess} />
-      <SessionStatusDialog clientId={client.id} occurrence={occurrence} mode="cancel" open={dialog === "cancel"} onOpenChange={(open) => setDialog(open ? "cancel" : null)} onSuccess={onSuccess} />
-      <CompletionDialog clientId={client.id} occurrence={occurrence} activity={activities.find((item) => item.assignmentId === occurrence.activityAssignmentId)} open={dialog === "complete"} onOpenChange={(open) => setDialog(open ? "complete" : null)} onSuccess={onSuccess} />
+      </button>
+
+      <Modal open={dialog === "details"} onOpenChange={(open) => setDialog(open ? "details" : null)} title={occurrence.title} description={`${formatDay(occurrence.scheduledOn, true)} at ${formatScheduleTime(occurrence.localTime)}`}>
+        <div className="grid gap-4 p-5">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className={cn("rounded-full border px-2 py-1 text-xs font-semibold capitalize", statusStyles[status])}>{status}</span>
+            <span className="rounded-full border bg-background-secondary px-2 py-1 text-xs text-muted-foreground">{kindLabel}</span>
+            <span className="rounded-full border bg-background-secondary px-2 py-1 text-xs text-muted-foreground">{occurrence.isRecurring ? "Repeats weekly" : "One-time"}</span>
+          </div>
+          {occurrence.notes ? <div><p className="text-xs font-semibold uppercase tracking-wide text-disabled-foreground">Notes</p><p className="mt-1 whitespace-pre-wrap break-words text-sm text-muted-foreground">{occurrence.notes}</p></div> : null}
+          {occurrence.skipReason ? <p className="rounded-lg border border-warning/30 bg-warning/5 p-3 text-sm text-warning">Reason: {occurrence.skipReason}</p> : null}
+          {unavailable ? <p className="rounded-lg border border-warning/30 bg-warning/5 p-3 text-sm text-warning">This assignment is paused or unavailable. Reminders and completion are disabled.</p> : null}
+          <div className="grid gap-2 text-sm text-muted-foreground sm:grid-cols-2">
+            <p className="flex items-center gap-2">{occurrence.reminderEnabled ? <Bell className="h-4 w-4 text-primary" aria-hidden="true" /> : <BellOff className="h-4 w-4" aria-hidden="true" />}{occurrence.reminderEnabled ? "Email reminder enabled" : "Email reminder disabled"}</p>
+            <p>Last updated by {author}</p>
+          </div>
+          {canChange ? <div className="flex flex-wrap justify-end gap-2 border-t pt-4">
+            {canComplete && occurrence.kind === "routine" && viewer.role === "trainee" && occurrence.scheduledOn === localToday ? <LinkButton href={`/trainee/workouts/${occurrence.routineAssignmentId}?schedule=${occurrence.id}`} className="h-9 px-3 text-sm"><Dumbbell className="h-4 w-4" aria-hidden="true" />Begin workout</LinkButton> : canComplete ? <Button type="button" className="h-9 px-3 text-sm" onClick={() => setDialog("complete")}><CheckCircle2 className="h-4 w-4" aria-hidden="true" />Log completed</Button> : null}
+            {status === "planned" ? <><Button type="button" variant="secondary" className="h-9 px-3 text-sm" onClick={() => { setDialog(null); onEdit(); }}><Pencil className="h-4 w-4" aria-hidden="true" />Edit</Button><Button type="button" variant="ghost" className="h-9 px-3 text-sm" onClick={() => setDialog("skip")}><SkipForward className="h-4 w-4" aria-hidden="true" />Skip</Button></> : null}
+            <Button type="button" variant="ghost" className="h-9 px-3 text-sm" onClick={() => setDialog("cancel")}><Trash2 className="h-4 w-4" aria-hidden="true" />Remove</Button>
+          </div> : null}
+          {["skipped", "cancelled"].includes(status) && client.status !== "archived" ? <div className="flex justify-end border-t pt-4"><RestoreButton clientId={client.id} occurrence={occurrence} onSuccess={handleSuccess} /></div> : null}
+        </div>
+      </Modal>
+      <SessionStatusDialog clientId={client.id} occurrence={occurrence} mode="skip" open={dialog === "skip"} onOpenChange={(open) => setDialog(open ? "skip" : null)} onSuccess={handleSuccess} />
+      <SessionStatusDialog clientId={client.id} occurrence={occurrence} mode="cancel" open={dialog === "cancel"} onOpenChange={(open) => setDialog(open ? "cancel" : null)} onSuccess={handleSuccess} />
+      <CompletionDialog clientId={client.id} occurrence={occurrence} activity={activities.find((item) => item.assignmentId === occurrence.activityAssignmentId)} open={dialog === "complete"} onOpenChange={(open) => setDialog(open ? "complete" : null)} onSuccess={handleSuccess} />
     </article>
   );
 }
@@ -454,7 +498,7 @@ export function TrainingSchedule({ client, viewer, occurrences, routines, activi
       </div>
       {view === "week" ? (
         <div className="grid gap-3 md:grid-cols-7">
-          {dates.map((date) => <section key={date} className={cn("min-w-0 rounded-xl border bg-background-secondary p-2", date === localToday && "border-primary/50")}><div className="mb-2 flex items-center justify-between gap-2"><div><h3 className="text-sm font-semibold">{formatDay(date)}</h3>{date === localToday ? <p className="text-[0.68rem] font-medium text-primary">Today</p> : null}</div>{canEdit && date >= localToday ? <Button type="button" variant="ghost" className="h-8 w-8 px-0" aria-label={`Add training on ${formatDay(date, true)}`} onClick={() => setEditor({ date, occurrence: null })}><Plus className="h-4 w-4" /></Button> : null}</div><div className="grid gap-2">{byDate.get(date)?.map((occurrence) => <SessionCard key={occurrence.id} occurrence={occurrence} client={client} viewer={viewer} routines={routines} activities={activities} localToday={localToday} onEdit={() => setEditor({ date: occurrence.scheduledOn, occurrence })} onSuccess={showSuccess} />)}{!byDate.get(date)?.length ? <p className="rounded-lg border border-dashed p-3 text-center text-xs text-muted-foreground">Rest day</p> : null}</div></section>)}
+          {dates.map((date) => <section key={date} className={cn("min-w-0 rounded-xl border bg-background-secondary p-2", date === localToday && "border-primary/50")}><div className="mb-2 flex items-center justify-between gap-2"><div className="min-w-0"><h3 className="break-words text-sm font-semibold">{formatDay(date)}</h3>{date === localToday ? <p className="text-[0.68rem] font-medium text-primary">Today</p> : null}</div>{canEdit && date >= localToday ? <Button type="button" variant="ghost" className="h-8 w-8 shrink-0 px-0" aria-label={`Add training on ${formatDay(date, true)}`} onClick={() => setEditor({ date, occurrence: null })}><Plus className="h-4 w-4" /></Button> : null}</div><div className="grid min-w-0 gap-2">{byDate.get(date)?.map((occurrence) => <SessionCard key={occurrence.id} occurrence={occurrence} client={client} viewer={viewer} routines={routines} activities={activities} localToday={localToday} compact onEdit={() => setEditor({ date: occurrence.scheduledOn, occurrence })} onSuccess={showSuccess} />)}{!byDate.get(date)?.length ? <p className="rounded-lg border border-dashed p-3 text-center text-xs text-muted-foreground">Rest day</p> : null}</div></section>)}
         </div>
       ) : (
         <div className="grid gap-3 lg:grid-cols-2">

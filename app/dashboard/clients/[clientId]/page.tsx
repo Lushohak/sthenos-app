@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { PendingLink as Link } from "@/components/ui/pending-link";
 import { notFound } from "next/navigation";
 import { ManageActivityAssignments } from "@/components/activities/manage-activity-assignments";
 import { ActivityCompletedToast } from "@/components/activities/activity-completed-toast";

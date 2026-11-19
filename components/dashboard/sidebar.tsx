@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { PendingLink as Link } from "@/components/ui/pending-link";
 import { BarChart3, Dumbbell, Footprints, LayoutDashboard, Library, Users } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { SthenosMark } from "@/components/brand/sthenos-logo";

@@ -56,9 +56,26 @@ test("@smoke coach and trainee share a recurring weekly training schedule", asyn
   await editor.getByLabel("Notes").fill("Keep the pace controlled");
   await editor.getByRole("button", { name: "Add training" }).click();
   await expect(editor).not.toBeVisible();
-  await expect(page.getByText(routineName).first()).toBeVisible();
-  await expect(page.getByText("Weekly").first()).toBeVisible();
-  await expect(page.getByText("Keep the pace controlled").first()).toBeVisible();
+  const sessionButton = page.getByRole("button", { name: `Open ${routineName} details` }).first();
+  await expect(sessionButton).toBeVisible();
+  await sessionButton.click();
+  const details = page.getByRole("dialog", { name: routineName });
+  await expect(details.getByText("Repeats weekly")).toBeVisible();
+  await expect(details.getByText("Keep the pace controlled")).toBeVisible();
+  await details.getByRole("button", { name: "Close modal" }).click();
+
+  const sessionCard = page.locator("article").filter({ hasText: routineName }).first();
+  const dayColumn = sessionCard.locator("xpath=ancestor::section[1]");
+  const [sessionCardBox, dayColumnBox] = await Promise.all([
+    sessionCard.boundingBox(),
+    dayColumn.boundingBox()
+  ]);
+  expect(sessionCardBox).not.toBeNull();
+  expect(dayColumnBox).not.toBeNull();
+  expect(sessionCardBox!.x).toBeGreaterThanOrEqual(dayColumnBox!.x);
+  expect(sessionCardBox!.x + sessionCardBox!.width).toBeLessThanOrEqual(
+    dayColumnBox!.x + dayColumnBox!.width
+  );
 
   await page.getByRole("button", { name: "4 weeks" }).click();
   await expect(page.getByText(routineName).first()).toBeVisible();
@@ -68,6 +85,8 @@ test("@smoke coach and trainee share a recurring weekly training schedule", asyn
   await page.getByRole("link", { name: "Schedule" }).click();
   await expect(page).toHaveURL(/\/trainee\/schedule/);
   await expect(page.getByRole("heading", { name: "Training schedule" })).toBeVisible();
-  await expect(page.getByText(routineName).first()).toBeVisible();
-  await expect(page.getByText("Last updated by Your coach").first()).toBeVisible();
+  const traineeSessionButton = page.getByRole("button", { name: `Open ${routineName} details` }).first();
+  await expect(traineeSessionButton).toBeVisible();
+  await traineeSessionButton.click();
+  await expect(page.getByRole("dialog", { name: routineName }).getByText("Last updated by Your coach")).toBeVisible();
 });

@@ -56,7 +56,18 @@ test("@smoke a coach navigates a focused client workspace with URL-backed tabs",
   await page.goto(`/dashboard/clients/${client!.id}?tab=unknown`);
   await expect(page.getByRole("heading", { name: "Training plan" })).toBeVisible();
 
-  await workspaceTabs.getByRole("link", { name: "Overview" }).click();
+  await page.route(`**/dashboard/clients/${client!.id}**`, async (route) => {
+    const requestUrl = new URL(route.request().url());
+    if (requestUrl.searchParams.get("tab") === "overview" && route.request().headers().rsc) {
+      await new Promise((resolve) => setTimeout(resolve, 350));
+    }
+    await route.continue();
+  });
+  const overviewTab = workspaceTabs.getByRole("link", { name: "Overview" });
+  await Promise.all([
+    expect(overviewTab).toHaveAttribute("aria-busy", "true"),
+    overviewTab.click()
+  ]);
   await expect(page).toHaveURL(/tab=overview/);
   await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible();
   await expect(page.getByText("76.4 kg", { exact: true })).toBeVisible();

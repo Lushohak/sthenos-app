@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { PendingLink as Link } from "@/components/ui/pending-link";
 import { usePathname, useSearchParams } from "next/navigation";
 import {
   PROGRESS_RANGES,
